@@ -100,6 +100,13 @@ Excluded on purpose (wrong scale for a personal project): Kubernetes, Terraform,
 
 ## Phase 0: Repo scaffold
 
+Do this first, before any code: **enable Cost Explorer in the billing console.** It takes one
+click and up to 24 hours to ingest. Until it has data, `ce:GetCostAndUsage` fails, the Phase 1
+budget alarm reads `null` for actual and forecast so it cannot fire, and cost allocation tag keys
+cannot be activated because they only become activatable after appearing in billing data. Enable
+it on day one or the entire build runs with no working spend guard.
+
+
 Goal: a clean Python repo that lints, tests, and installs from lockfile.
 
 Tools in this phase:
@@ -135,7 +142,7 @@ Tools in this phase:
 - [ ] `infra/` CDK app skeleton (`app.py`, `cdk.json`, stacks package)
 - [ ] `cdk bootstrap` the account/region
 - [ ] `OpsStack`: AWS Budget with monthly limit (ask maintainer for the number, suggest $30) + SNS email alert at 50/80/100%
-- [ ] Cost allocation tags activated for `project` and `env`
+- [ ] Cost allocation tags activated for `project` and `env`. Blocked until Cost Explorer has ingested a day of data and the keys have appeared in a bill, so this lands late even though it belongs here
 - [ ] IAM role for GitHub Actions OIDC (trust policy scoped to this repo), no access keys created
 - [ ] Document teardown: `cdk destroy` order in README
 
@@ -229,12 +236,14 @@ Tools in this phase:
 - **pydantic-evals**: local eval framework from the Pydantic team. A golden set of inputs with expected typed outputs, scored in seconds under pytest. Why: before any change deploys, you know whether agent quality moved.
 - **AgentCore Evaluations**: managed evaluators (response quality, safety, tool usage) that score real production traces continuously. Why: local evals catch regressions before deploy; this catches drift after.
 
-- [ ] AgentCore Observability enabled on the runtime
+- [ ] AgentCore Observability enabled on the runtime: `aws-opentelemetry-distro` in the image, `opentelemetry-instrument` in front of the entrypoint, and `tracingEnabled` on the runtime
+- [ ] CloudWatch Transaction Search enabled. It needs a CloudWatch Logs resource policy letting `xray.amazonaws.com` write to `aws/spans`, which the CFN resource does not create for itself, and the runtime's traces delivery must depend on it explicitly or CloudFormation builds them in parallel and the delivery loses the race
 - [ ] CloudWatch dashboard: agent invocations, errors, latency, daily token totals
 - [ ] CloudWatch alarms: error rate and a daily token-spend threshold, both to the Phase 1 SNS topic
 - [ ] `evals/`: 10 to 15 golden cases with `pydantic-evals`; assertions on typed output fields
 - [ ] Evals run via `uv run pytest evals` and are marked so they can be skipped in fast unit runs
-- [ ] AgentCore Evaluations configured with at least response-quality and tool-usage evaluators on production traces
+- [ ] AgentCore Evaluations configured with at least response-quality and tool-usage evaluators on production traces. Set `executionStatus` to ENABLED and raise `samplingPercentage`: the defaults are DISABLED and 10%, so it deploys clean and scores nothing
+- [ ] Token metrics: AgentCore does not publish them. Derive them from a metric filter over your own structured run log, and know that the filter only sees the deployed runtime, not local or CI runs
 
 STOP gate 6: show one full trace for an agent run (spans for model calls and tool calls). Show `uv run pytest evals` passing. Show the dashboard.
 
@@ -249,9 +258,10 @@ Tools in this phase:
 - **AWS Amplify Hosting**: watches the repo, builds the frontend on every push, and serves it on a CDN with HTTPS. Why: frontend deployment becomes a side effect of `git push`.
 
 - [ ] `frontend/`: Next.js + Tailwind, one page that calls the backend and renders the result
-- [ ] Cognito user pool + app client in `FrontendStack`; hosted UI or Amplify Auth components
+- [ ] Cognito user pool + app client, hosted UI or Amplify Auth components. Put it in `BackendStack`, not `FrontendStack`: the API verifies the tokens and the frontend needs the API's URL, so a downstream pool makes the two stacks import each other and CloudFormation rejects cyclic exports
 - [ ] Backend validates Cognito JWTs on protected routes
-- [ ] Amplify Hosting connected to the repo (`frontend/` root), env vars set
+- [ ] Amplify Hosting serving `frontend/`. CloudFormation cannot create a Git-backed Amplify app without a stored GitHub token (`AccessToken` or `OauthToken` is required), so either accept a long-lived credential in the account or create the app with no repository and have CI upload the build through the Amplify deployment API
+- [ ] Route the API through an Amplify rewrite (`/api/<*>` to the backend) so the browser stays same-origin. This removes the need for CORS entirely and breaks the other half of the stack cycle
 - [ ] A visible disclaimer/footer component slot (project-specific text comes later)
 
 STOP gate 7: maintainer signs up, logs in on the deployed Amplify URL, and sees data returned from an authenticated backend call. Unauthenticated calls return 401 (show it).
@@ -266,8 +276,10 @@ Tools in this phase:
 - **cdk diff in CI**: prints the infrastructure changes a PR would cause. Why: you review infrastructure changes the same way you review code changes, before they happen.
 
 - [ ] Workflow `ci.yml`: on PR run ruff, pytest (unit), and `cdk diff` via the OIDC role
-- [ ] Workflow `deploy.yml`: on main run tests, evals, `cdk deploy --all`, then frontend build (Amplify auto-builds on push)
-- [ ] Branch protection on main: PR + passing checks required
+- [ ] Workflow `deploy.yml`: on main run tests, evals, `cdk deploy --all`, then build the frontend and upload it. Amplify only auto-builds on push if the app is Git-connected, which needs a stored token; otherwise CI does the upload
+- [ ] `docker/setup-qemu-action` and `setup-buildx-action` if any image is arm64. Runners are amd64, and emulated builds are slow enough to dominate the deploy
+- [ ] Branch protection on main: PR + passing checks required. Needs GitHub Pro on a private repo; both the protection and rulesets APIs return 403 on the free plan. Set `enforce_admins` or it will not stop the repo owner, which on a solo project means it stops nobody
+- [ ] OIDC trust policy: GitHub now issues subjects with numeric owner and repo ids embedded (`repo:owner@123/repo@456:ref:...`). A policy matching only `repo:owner/repo:*` is denied, and the action retries so the job hangs rather than failing. CloudTrail is the only place the reason appears
 - [ ] Concurrency guard so two deploys cannot overlap
 
 STOP gate 8: merge a trivial change (README typo). Show the green pipeline and the change live.
@@ -281,8 +293,9 @@ Tools in this phase:
 - **AWS Cost Explorer**: the console view that breaks the bill down by service, tag, and day. Why: paired with the Phase 1 tags, it answers "what is costing me money" in one screen.
 - **IAM least privilege review**: narrowing each role to only the actions and resources it uses. Why: an agent that can call tools is an actor in your account; its blast radius should be as small as its job.
 
-- [ ] Bedrock Guardrails: a basic policy (PII masking, denied topics placeholder) attached to agent calls
-- [ ] Verify log retention on every log group is 30 days
+- [ ] Bedrock Guardrails: a basic policy (PII masking, denied topics placeholder) attached to agent calls. Three traps: guardrail versions are immutable and the CFN version resource does not cut a new one when the policy changes, so pin a hash of the config into its logical id or the runtime silently keeps the old policy; a topic definition is capped at 200 characters; and streaming must run in `sync` mode, because `async` delivers chunks before the guardrail sees them and never masks PII
+- [ ] Handle the block path: a guardrail intervention ends the agent loop before the model can produce structured output, so a naive handler returns None and the runtime answers 500. A working safety control should not look like a server error
+- [ ] Verify log retention on every log group is 30 days. Services create their own groups and default to never expiring; so do CDK custom-resource providers, whose Lambda names are generated, so build the group name from the handler's ref
 - [ ] Review IAM: agent, backend, and CI roles are least-privilege; no wildcards on resources where avoidable
 - [ ] Cost Explorer review with maintainer: line-item actuals vs the table below
 - [ ] `scripts/teardown_check.py` or documented `cdk destroy` runbook tested against `cdk diff`
