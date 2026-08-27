@@ -5,8 +5,8 @@ builds the platform in phases, stopping for review at each gate.
 
 | File | What it is |
 |---|---|
+| `aws/SERVICES.md` | **Start here if you are new to AWS.** How a full AWS deployment fits together: the ten jobs every deployment has to fill, which service fills each, what the alternatives are, and what it all costs |
 | `CLAUDE.md` | The build plan: eleven phases, each with a checklist and a STOP gate |
-| `aws/SERVICES.md` | Every AWS service in the stack, what it was chosen over, and what it costs |
 | `aws/GOTCHAS.md` | Failures found by running the plan once, with the error text that identifies them |
 
 The plan has been executed once end to end. Corrections from that run are folded into `CLAUDE.md`;
