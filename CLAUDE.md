@@ -75,16 +75,21 @@ Excluded on purpose (wrong scale for a personal project): Kubernetes, Terraform,
 ```
 .
 ├── CLAUDE.md              # this file
-├── pyproject.toml
-├── .env.example
-├── src/<PROJECT_NAME>/    # application code (later phases add packages)
+├── pyproject.toml         # project definition; uv.lock pins exact versions
+├── .env.example           # every env var the app reads, no values
+├── src/<package>/         # application code, the only thing that ships
+├── tests/                 # fast tests, no network
 ├── infra/                 # CDK app: app.py + stacks/
+├── migrations/            # Alembic versioned schema changes
 ├── frontend/              # Next.js app (Phase 7)
-├── evals/                 # golden set + pydantic-evals cases
-├── scripts/               # one-shot operational scripts
-├── tests/
-└── .github/workflows/
+├── evals/                 # golden set; hits a real model, so slow and costs money
+├── scripts/               # one-shot operational scripts, never imported
+├── docs/                  # long-form docs the README links to
+└── .github/workflows/     # CI; GitHub reads this exact path only
 ```
+
+What each directory is for, which of these are real conventions and which are choices, and why
+`src/` exists at all: see `LAYOUT.md`.
 
 ## Conventions
 
