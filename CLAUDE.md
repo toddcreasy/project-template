@@ -317,6 +317,9 @@ Goal: CLAUDE.md becomes small again. Claude Code loads this file every session, 
 - [ ] Add one pointer line under the stack table: "How each piece was built, verified, and what it costs: see `docs/SETUP.md`"
 - [ ] Commit as its own change, no other edits mixed in
 
+`aws/CLAUDE.md` in the template repo is the target shape for this rewrite, already generalized.
+Start from it rather than deleting sections by hand.
+
 STOP gate 10: show CLAUDE.md under roughly 100 lines, `docs/SETUP.md` containing the full history, and both rendering correctly on GitHub.
 
 ## Expected monthly cost (dev, personal scale)
