@@ -4,7 +4,7 @@ Steady-state operating file for a deployed AWS project. This is what `CLAUDE.md`
 build plan finishes and Phase 10 archives the phases into `docs/SETUP.md`. Claude Code loads this
 file every session, so it carries only the rules that are always needed.
 
-Use the root `CLAUDE.md` to build a project. Use this one to run it.
+Use `aws/BUILD.md` to build a project. Use this one to run it.
 
 ## Fill these in before first use
 
