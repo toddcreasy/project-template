@@ -89,7 +89,7 @@ Excluded on purpose (wrong scale for a personal project): Kubernetes, Terraform,
 ```
 
 What each directory is for, which of these are real conventions and which are choices, and why
-`src/` exists at all: see `LAYOUT.md`.
+`src/` exists at all: see `aws/LAYOUT.md`.
 
 ## Conventions
 

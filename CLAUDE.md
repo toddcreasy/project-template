@@ -1,8 +1,7 @@
 # CLAUDE.md
 
-Python project template with no cloud or platform assumptions. Drop this file into a fresh repo,
-fill in the placeholders, and Claude Code scaffolds the project in two phases, stopping for review
-after each. Platform-specific templates live in their own directories (`aws/`, and more to come).
+Python project template. Drop this file into a fresh repo, fill in the placeholders, and Claude
+Code scaffolds the project in two phases, stopping for review after each.
 
 ## Fill these in before first use
 
@@ -43,9 +42,8 @@ Direct. Evidence-first. Skip preamble.
 
 ### Python
 - Use `uv` for everything: `uv sync`, `uv run <cmd>`, `uv add <pkg>`. Never activate a venv manually; `uv run` handles it. Never use pip with `--break-system-packages`.
-- Always `pyproject.toml`. Commit `uv.lock`. Always a `.env.example` with every variable the app reads.
-- Settings load through `pydantic-settings`. Secrets are `SecretStr`. Locally they come from `.env`, which is gitignored; deployed they come from the host's secret store, never from a committed file.
-- Before calling work done: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy`, `uv run pytest`. All four clean.
+- Always `pyproject.toml`. Always a `.env.example` with every variable the app reads.
+- Settings load through `pydantic-settings`. Secrets are `SecretStr`. Locally they come from `.env`; deployed they come from the host's secret store. `.env` is gitignored.
 
 ### Coding principles
 - Don't add features, refactors, or improvements beyond what was asked.
