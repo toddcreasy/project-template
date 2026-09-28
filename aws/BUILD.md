@@ -16,7 +16,7 @@ Direct. Evidence-first. Skip preamble.
 
 ### Writing style
 - Never use em dashes or en dashes in any written output. Use commas, periods, semicolons, or restructure.
-- Write in the maintainer's voice for all prose output. The voice profile is `.claude/rules/writing-voice.md`. If the file is missing, copy the template from the repo root (`writing-voice.md`) into place and ask the maintainer to review the fill-in sections before writing any external prose. No generic LLM prose.
+- Write in the maintainer's voice for all prose output. The voice profile is `~/.claude/rules/writing-voice.md`. Read it; do not edit it. No generic LLM prose.
 - Keep all prose short and direct. State the point; skip "actually matters" style framing.
 
 ### Core protocol
@@ -127,7 +127,6 @@ Tools in this phase:
 - [ ] `.gitignore` (Python, node, `.env`, CDK out, IDE)
 - [ ] `.env.example` created (empty vars added as phases introduce them)
 - [ ] README stub: project name, one-line purpose, setup commands
-- [ ] `.claude/rules/writing-voice.md` in place (copy the template from the repo root; flag the fill-in sections to the maintainer)
 - [ ] Initial commit pushed
 
 STOP gate 0: `uv run ruff check .` is clean and `uv run pytest` passes. Show both outputs.
