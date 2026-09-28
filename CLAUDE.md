@@ -30,7 +30,7 @@ Direct. Evidence-first. Skip preamble.
 
 ### Writing style
 - Never use em dashes or en dashes in any written output. Use commas, periods, semicolons, or restructure.
-- Write in the maintainer's voice for all prose output. The voice profile is `.claude/rules/writing-voice.md`. If the file is missing, ask the maintainer for it before writing any external prose. No generic LLM prose.
+- Write in the maintainer's voice for all prose output. The voice profile is `~/.claude/rules/writing-voice.md`. Read it; do not edit it. No generic LLM prose.
 - Keep all prose short and direct. State the point; skip "actually matters" style framing.
 
 ### Core protocol
@@ -114,7 +114,6 @@ Goal: a clean repo that lints, type-checks, tests, and installs from lockfile.
 - [ ] `.gitignore` (Python, `.venv`, `.env`, caches, IDE)
 - [ ] `.env.example` created (empty until the app reads a variable)
 - [ ] README: project name, one-line purpose, setup commands (`uv sync`, `uv run pytest`)
-- [ ] `.claude/rules/writing-voice.md` in place (ask the maintainer for it)
 - [ ] Initial commit pushed
 
 STOP gate 0: show clean output from `uv run ruff check .`, `uv run ruff format --check .`,
