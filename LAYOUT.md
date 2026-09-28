@@ -62,9 +62,9 @@ testpaths = ["tests"]
 ### `pyproject.toml` and `uv.lock`
 
 `pyproject.toml` is the single file describing the project: dependencies, build system, and
-configuration for ruff, mypy, and pytest. It replaced the older scatter of `setup.py`,
+configuration for ruff and pytest. It replaced the older scatter of `setup.py`,
 `setup.cfg`, `requirements.txt`, and per-tool config files. Keep tool config here; a stray
-`mypy.ini` or `.flake8` splits the truth across two places.
+`pytest.ini` or `.flake8` splits the truth across two places.
 
 `uv.lock` records the exact resolved version of every dependency, transitive ones included.
 `pyproject.toml` says "roughly this"; the lock file says "precisely this". Commit both. CI runs
