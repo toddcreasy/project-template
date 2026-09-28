@@ -115,7 +115,7 @@ How each piece was built, verified, and what it costs: see `docs/SETUP.md`.
 ```
 
 What each directory is for, and which of these are real conventions rather than choices: see
-`LAYOUT.md` in the template repo.
+`aws/LAYOUT.md` in the template repo.
 
 ## Conventions
 

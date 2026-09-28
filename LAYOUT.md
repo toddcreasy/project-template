@@ -1,27 +1,23 @@
 # Repository layout, and why
 
-Every directory here, what goes in it, and whether it is a real convention or just a choice. That
-distinction matters: some of these have a technical reason and breaking them causes real bugs.
-Others are habit, and you should feel free to disagree.
+Every file and directory the Python template creates, what goes in it, and whether it is a real
+convention or just a choice. The distinction matters: some of these have a technical reason and
+breaking them causes real bugs. Others are habit, and you should feel free to disagree.
 
 ```
 .
-├── CLAUDE.md              instructions the AI assistant reads every session
-├── README.md              instructions a human reads
-├── pyproject.toml         Python project definition: dependencies, tools, build
-├── uv.lock                exact versions, so every machine installs the same thing
-├── .env.example           every environment variable the app reads, with no values
-├── .python-version        pins the Python version
-├── Dockerfile             how the backend is packaged into a container
-├── src/<package>/         the application code
-├── tests/                 tests for it
-├── infra/                 the cloud infrastructure, as code
-├── migrations/            database schema changes, versioned
-├── frontend/              the web UI
-├── evals/                 quality tests for AI behaviour
-├── scripts/               one-shot operational scripts
-├── docs/                  long-form documentation
-└── .github/workflows/     CI: what runs on every push
+├── CLAUDE.md                 instructions the AI assistant reads every session
+├── README.md                 instructions a human reads
+├── pyproject.toml            project definition: dependencies, build, tool config
+├── uv.lock                   exact versions, so every machine installs the same thing
+├── .python-version           pins the interpreter
+├── .env.example              every environment variable the app reads, with no values
+├── .pre-commit-config.yaml   checks that run before each commit
+├── src/<package>/            the application code
+├── tests/                    tests for it
+├── scripts/                  one-shot operational scripts
+├── docs/                     long-form documentation
+└── .github/workflows/        CI: what runs on every push
 ```
 
 ---
@@ -30,7 +26,7 @@ Others are habit, and you should feel free to disagree.
 
 ### `src/<package>/` and why not just `<package>/`
 
-This is called the **src layout**, and it is the current Python packaging recommendation.
+This is the **src layout**, and it is the current Python packaging recommendation.
 
 The alternative, putting your package at the top level, has a subtle failure. When you run tests
 from the project root, Python finds your package in the current directory and imports it from
@@ -38,25 +34,23 @@ there, whether or not the package is correctly installable. Packaging mistakes s
 until someone installs it elsewhere and it breaks.
 
 With `src/`, the current directory contains no importable package. `import myapp` only works if
-the package is genuinely installed. Your tests therefore exercise the same thing your users get.
+the package is installed. Your tests therefore exercise the same thing your users get.
 
-It costs one line of configuration:
+The `uv_build` backend expects this layout by default. Configuration is only needed when the
+package name differs from the project name:
 
 ```toml
 [tool.uv.build-backend]
-module-root = "src"
 module-name = "myapp"
 ```
 
-**Verdict: real convention, adopt it.** The failure it prevents is the kind you find at the worst
-possible moment.
+**Verdict: real convention, adopt it.** The failure it prevents shows up at the worst possible
+moment.
 
 ### `tests/` outside `src/`
 
 Tests sit beside the package, not inside it, so they are not shipped to whoever installs your
 code. Nobody wants your test fixtures in their site-packages.
-
-Configure the runner to look there:
 
 ```toml
 [tool.pytest.ini_options]
@@ -65,6 +59,28 @@ testpaths = ["tests"]
 
 **Verdict: real convention.** Both parts, the name and the position outside the package.
 
+### `pyproject.toml` and `uv.lock`
+
+`pyproject.toml` is the single file describing the project: dependencies, build system, and
+configuration for ruff, mypy, and pytest. It replaced the older scatter of `setup.py`,
+`setup.cfg`, `requirements.txt`, and per-tool config files. Keep tool config here; a stray
+`mypy.ini` or `.flake8` splits the truth across two places.
+
+`uv.lock` records the exact resolved version of every dependency, transitive ones included.
+`pyproject.toml` says "roughly this"; the lock file says "precisely this". Commit both. CI runs
+`uv sync --locked`, which fails if the two disagree instead of quietly re-resolving.
+
+**Verdict: the standard. There is no live alternative.**
+
+### `.python-version`
+
+One line naming the interpreter. uv reads it and installs that version if it is missing, so every
+machine and the CI runner test against the same Python. `requires-python` in `pyproject.toml` is
+the floor you promise users; `.python-version` is what you develop on.
+
+**Verdict: real convention for applications.** A library tested across several versions leaves
+the matrix to CI instead.
+
 ### `.github/workflows/`
 
 Not a choice at all. GitHub Actions only reads workflow files from this exact path. Put them
@@ -72,72 +88,48 @@ anywhere else and nothing runs.
 
 **Verdict: mandatory.**
 
-### `pyproject.toml`
-
-The single file describing the project: dependencies, build system, and configuration for tools
-like the linter, the formatter, and the test runner. It replaced the older scatter of `setup.py`,
-`setup.cfg`, `requirements.txt`, and per-tool config files.
-
-Paired with a **lock file** (`uv.lock`), which records the exact resolved version of every
-dependency including transitive ones. `pyproject.toml` says "roughly this"; the lock file says
-"precisely this". Commit both. The lock file is what makes a build reproducible.
-
-**Verdict: the standard. There is no live alternative.**
-
-### `migrations/`
-
-A database has a shape, and that shape changes as the project grows. Editing tables by hand does
-not survive contact with a second environment or a second person.
-
-A migration tool records each change as a numbered file, so any database can be brought from any
-version to any other by replaying them in order. Each file has an `upgrade` and a `downgrade`.
-
-The name is configured, not fixed:
-
-```ini
-script_location = %(here)s/migrations
-```
-
-Alembic's own default is `alembic/`. `migrations/` is more descriptive and just as common.
-
-**Verdict: the tool is essential, the directory name is yours.**
-
 ---
 
 ## The ones that are common convention
 
-### `infra/`
+### `.env.example`
 
-Cloud infrastructure described in code, so that creating it is repeatable and reviewable. Here it
-is a CDK app, meaning Python that generates the infrastructure definition.
+A list of every environment variable the app reads, with the values blank. The real `.env` is
+gitignored, so without this file a new clone has no way to know what configuration it needs
+except by reading the settings code.
 
-Two reasons it sits beside `src/` rather than inside it. It is not part of the application, so it
-should not ship when the package is installed. And it has different dependencies, which you do not
-want in your production container.
+Keep it in step with the `pydantic-settings` class. A variable the app reads but this file omits
+is a setup bug waiting for the next person.
 
-Common alternative names: `cdk/`, `terraform/`, `deploy/`, `ops/`.
+**Verdict: common convention, and cheap enough to always do.**
 
-**Verdict: widely used, not enforced. Keeping infrastructure out of the application package is the
-part that matters.**
+### `.pre-commit-config.yaml`
+
+Runs ruff before each commit lands. The point is the fast feedback loop: a lint error caught at
+commit time costs seconds, the same error caught in CI costs a push and a wait.
+
+It does not replace CI. Hooks can be skipped with `--no-verify`, and CI cannot.
+
+**Verdict: common convention. The filename is fixed by the tool.**
 
 ### `scripts/`
 
-One-shot operational tools. Check a connection, seed data, probe an API, verify a teardown. Things
-you run by hand occasionally.
+One-shot operational tools: seed data, probe an API, run a migration by hand. Things a person
+runs occasionally.
 
-The line worth holding: if something is imported by the application, it belongs in `src/`. If it
-is only ever run directly by a person, it belongs here. Scripts that quietly become dependencies
-are a common source of mess.
+The line worth holding: if the application imports it, it belongs in `src/`. If it is only ever
+run directly by a person, it belongs here. Scripts that quietly become dependencies are a common
+source of mess.
 
 **Verdict: common convention.**
 
 ### `docs/`
 
-Long-form documentation that does not belong in the README. Setup history, architecture decisions,
-runbooks.
+Long-form documentation that does not belong in the README: architecture decisions, runbooks,
+design notes.
 
-The reason to have it: a README should be readable in one sitting. Everything that would bloat it
-past that goes here, and the README links across.
+A README should be readable in one sitting. Everything that would bloat it past that goes here,
+and the README links across.
 
 **Verdict: common convention.**
 
@@ -145,39 +137,24 @@ past that goes here, and the README links across.
 
 ## The ones that are just choices
 
-### `frontend/`
+### `.claude/` and `CLAUDE.md`
 
-The web UI, kept in the same repository as the backend. This is a **monorepo** decision, and it is
-genuinely arguable.
-
-**Why together.** One clone, one branch, one pull request when a change spans both sides. An API
-change and the UI change that depends on it land at the same moment, so the two are never out of
-step. For one or two people, this is almost always right.
-
-**Why separate.** Different languages, different tooling, different deploy cadence, and CI that
-rebuilds everything when only one side changed. At a size where separate teams own each side, the
-coupling starts to cost more than it saves.
-
-**Verdict: a real fork in the road. Monorepo is the right default for a small project.**
-
-### `evals/`
-
-Tests for AI behaviour, as opposed to tests for code. Ordinary tests assert exact outputs. A model
-produces different words each time, so these assert on properties instead: did it call the right
-tool, does the answer contain the right substance, did it refuse when it should.
-
-They are separate from `tests/` for a practical reason. They call a real model, so they cost money
-and take a minute rather than a second. The normal test suite has to stay fast enough that nobody
-avoids running it.
-
-**Verdict: no established convention. This is a young practice and naming has not settled.**
-
-### `.claude/`
-
-Configuration for the AI assistant: permission rules, hooks, project-specific writing rules.
-Tool-specific, and it would disappear along with the tool.
+Configuration for the AI assistant: permission rules, hooks, project instructions. Tool-specific,
+and it would disappear along with the tool.
 
 **Verdict: a choice, and a temporary one.**
+
+---
+
+## Directories to add only when needed
+
+The template leaves these out. Add each one the day the project needs it, not before.
+
+| Directory | When it appears | Why it sits outside `src/` |
+|---|---|---|
+| `migrations/` | The project gets a database with a schema that changes | Schema history is not application code, and each file replays in order against any environment |
+| `frontend/` | There is a web UI | Different language, tooling, and build. Same repo is the right default at small scale |
+| `evals/` | The code calls an LLM | Evals hit a real model, so they are slow and cost money. The normal test suite has to stay fast |
 
 ---
 
@@ -185,10 +162,9 @@ Tool-specific, and it would disappear along with the tool.
 
 Directories separate things by **lifecycle**, not by type.
 
-Application code, infrastructure, database migrations, and operational scripts all change for
-different reasons, on different schedules, reviewed by different eyes, with different consequences
-when wrong. Keeping them apart means a change to one does not force you to reason about the
-others.
+Application code, tests, operational scripts, and documentation change for different reasons, on
+different schedules, with different consequences when wrong. Keeping them apart means a change to
+one does not force you to reason about the others.
 
 That is also why `src/` contains only what ships. Everything outside it exists to build, test,
-deploy, or explain the thing inside it.
+run, or explain the thing inside it.
