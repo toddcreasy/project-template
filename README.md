@@ -5,7 +5,7 @@ Claude Code scaffolds the project in phases, stopping for review at each gate.
 
 | File | What it is |
 |---|---|
-| `CLAUDE.md` | Plain Python project: uv, ruff, mypy, pytest, pre-commit, GitHub Actions. No cloud assumptions |
+| `CLAUDE.md` | Plain Python project: uv, ruff, pytest, pre-commit, GitHub Actions. No cloud assumptions |
 | `LAYOUT.md` | Every file and directory the Python template creates, and which of them are real conventions rather than choices |
 | `aws/` | Personal AWS project on Bedrock, AgentCore, Aurora, App Runner, and Amplify |
 

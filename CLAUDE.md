@@ -47,7 +47,7 @@ Direct. Evidence-first. Skip preamble.
 
 ### Coding principles
 - Don't add features, refactors, or improvements beyond what was asked.
-- Don't add comments, docstrings, or type annotations to code you didn't change. New code is fully typed.
+- Don't add comments, docstrings, or type annotations to code you didn't change.
 - No helpers or abstractions for one-time operations. Three similar lines beat a premature abstraction.
 - Validate only at system boundaries (user input, external APIs). Trust internal code.
 - When editing: match existing style, don't touch adjacent code, remove only what YOUR change made unused. Mention unrelated dead code; don't delete it.
@@ -60,7 +60,6 @@ Direct. Evidence-first. Skip preamble.
 | Installs, envs, lockfile | uv | One fast tool replacing pip, venv, and poetry. Reproducible installs from `uv.lock`. |
 | Build backend | `uv_build` | Native src-layout support; no setuptools config. |
 | Lint + format | ruff | One binary, milliseconds, so checks never feel optional. |
-| Type checking | mypy (strict) | Catches the bugs tests miss at the boundaries between modules. |
 | Tests | pytest | The standard runner. Every STOP gate needs a runnable proof. |
 | Config | pydantic-settings | Typed settings from env vars; bad config fails at startup, not deep in a call. |
 | Pre-commit | pre-commit | Runs ruff before each commit so broken code never lands. |
@@ -89,7 +88,7 @@ directory is for, which are real conventions, and why `src/` exists at all: see 
 ## Conventions
 
 - src layout. `import <PACKAGE>` works only when installed, so tests exercise what users get.
-- Tool config lives in `pyproject.toml`. No `setup.cfg`, `mypy.ini`, `pytest.ini`, or `.flake8`.
+- Tool config lives in `pyproject.toml`. No `setup.cfg`, `pytest.ini`, or `.flake8`.
 - Unit tests make no network calls. Anything that does is marked and skipped by default.
 - Use `logging` in `src/`, never `print`. Configure handlers once at the entrypoint.
 - Pin dependency lower bounds in `pyproject.toml`; `uv.lock` pins exact versions.
@@ -100,12 +99,11 @@ directory is for, which are real conventions, and why `src/` exists at all: see 
 
 ## Phase 0: Scaffold
 
-Goal: a clean repo that lints, type-checks, tests, and installs from lockfile.
+Goal: a clean repo that lints, tests, and installs from lockfile.
 
 - [ ] `uv init --package` with `pyproject.toml`: project metadata, `requires-python = ">=<PYTHON_VERSION>"`, `uv_build` backend, `.python-version`
-- [ ] Dev deps via `uv add --dev`: `ruff`, `mypy`, `pytest`, `pre-commit`
+- [ ] Dev deps via `uv add --dev`: `ruff`, `pytest`, `pre-commit`
 - [ ] `[tool.ruff]` config: line length, target version, lint rules (at least `E`, `F`, `I`, `B`, `UP`, `SIM`); format enabled
-- [ ] `[tool.mypy]` config: `strict = true`, `files = ["src", "tests"]`
 - [ ] `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, a `network` marker skipped by default
 - [ ] `.pre-commit-config.yaml` with ruff lint and format hooks; `uv run pre-commit install`
 - [ ] Directory layout created as above, with `src/<PACKAGE>/__init__.py` and one passing test in `tests/`
@@ -115,13 +113,13 @@ Goal: a clean repo that lints, type-checks, tests, and installs from lockfile.
 - [ ] Initial commit pushed
 
 STOP gate 0: show clean output from `uv run ruff check .`, `uv run ruff format --check .`,
-`uv run mypy`, and `uv run pytest`.
+and `uv run pytest`.
 
 ## Phase 1: CI
 
-Goal: every push and pull request runs the same four checks as the local gate.
+Goal: every push and pull request runs the same three checks as the local gate.
 
-- [ ] `.github/workflows/ci.yml`: on pull request and push to main, `astral-sh/setup-uv` with caching, `uv sync --locked`, then ruff check, ruff format check, mypy, pytest
+- [ ] `.github/workflows/ci.yml`: on pull request and push to main, `astral-sh/setup-uv` with caching, `uv sync --locked`, then ruff check, ruff format check, pytest
 - [ ] Concurrency group per ref with `cancel-in-progress: true`
 - [ ] Branch protection on main: PR plus passing CI required, `enforce_admins` on or it will not stop the repo owner. Needs GitHub Pro on a private repo; the API returns 403 on the free plan
 
