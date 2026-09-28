@@ -38,7 +38,7 @@ Direct. Evidence-first. Skip preamble.
 
 ### Writing style
 - Never use em dashes or en dashes in any written output. Use commas, periods, semicolons, or restructure.
-- Write in the maintainer's voice for all prose output. The voice profile is `.claude/rules/writing-voice.md`. This repo-local copy overrides any global one. Never write to the global copy. No generic LLM prose.
+- Write in the maintainer's voice for all prose output. The voice profile is `~/.claude/rules/writing-voice.md`. Read it; do not edit it. No generic LLM prose.
 - Keep all prose short and direct. State the point; skip "actually matters" style framing.
 
 ### Core protocol
