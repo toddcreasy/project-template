@@ -12,7 +12,7 @@ literal value.
 |---|---|
 | `<PROJECT_NAME>` | Short kebab-case name for the repo and distribution |
 | `<PACKAGE>` | Python package name under `src/`, usually `<PROJECT_NAME>` with underscores |
-| `<PYTHON_VERSION>` | Minimum Python, e.g. `3.12`, pinned in `.python-version` |
+| `<PYTHON_VERSION>` | Minimum Python is 3.14, pinned in `.python-version` |
 
 ## How Claude Code must use this file
 
