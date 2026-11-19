@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Render every variant of the template into .test-output/ and run the checks a generated repo's
-# CI runs. Needs uv, gitleaks, terraform (or tofu), and tflint on PATH.
+# CI runs. Needs uv, gitleaks, terraform (hashicorp/tap), and tflint on PATH.
 # Copier tasks are skipped because they prompt and push; setup_env.py and the leak check are
 # exercised directly instead.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=.test-output
-TF=$(command -v terraform || command -v tofu)
+TF=$(command -v terraform)
 rm -rf "$OUT" && mkdir -p "$OUT"
 
 render() {

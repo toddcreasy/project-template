@@ -8,7 +8,7 @@ This repo is a Copier template, not a project. `template/` is what generated rep
 - Never use em dashes or en dashes in any written output, including rendered templates.
 - Write in the maintainer's voice: `~/.claude/rules/writing-voice.md`. Short and direct.
 - Every change to `template/` gets tested: `scripts/test-template.sh` must pass before a commit.
-  It needs uv, gitleaks, terraform or tofu, and tflint on PATH.
+  It needs uv, gitleaks, terraform (`brew install hashicorp/tap/terraform`), and tflint on PATH.
 - Jinja includes resolve from the repo root: `{% include "template/_includes/..." %}`.
 - A file under `template/` with a `.jinja` suffix is rendered; anything else is copied verbatim.
 - Generated repos must pass their own pre-commit and CI on the first commit. If a change adds a
