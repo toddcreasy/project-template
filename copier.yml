@@ -37,9 +37,10 @@ license:
   type: str
   help: License
   choices:
-    MIT: MIT
+    Apache 2.0 (permissive, with a patent grant): Apache-2.0
+    MIT (permissive, shortest): MIT
     None (all rights reserved): none
-  default: MIT
+  default: Apache-2.0
 
 # ---------------------------------------------------------------- python
 

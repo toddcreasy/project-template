@@ -20,7 +20,7 @@ GitHub repo created. The `uvx` route skips the installs, so bring those tools yo
 
 | Question | Effect |
 |---|---|
-| Name, description, license | README, `pyproject.toml`, MIT `LICENSE` or none |
+| Name, description, license | README, `pyproject.toml`, Apache 2.0 (default) or MIT `LICENSE`, or none |
 | Python? version? | uv, ruff, pytest, pre-commit, src layout, `settings.py` built from the env vars |
 | GitHub Actions? | `ci.yml` and Dependabot. The secret and personal-info scan job is always in it |
 | Create GitHub repo? visibility | `gh repo create --push` after the first commit |

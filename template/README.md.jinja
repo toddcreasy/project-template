@@ -29,9 +29,9 @@ terraform -chdir=infra apply
 
 Teardown: `terraform -chdir=infra destroy`.
 {%- endif %}
-{%- if license == "MIT" %}
+{%- if license != "none" %}
 
 ## License
 
-MIT
+{{ "Apache 2.0" if license == "Apache-2.0" else license }}
 {%- endif %}

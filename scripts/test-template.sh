@@ -15,7 +15,7 @@ render() {
   uvx --from "copier>=9.5,<10" copier copy --trust --skip-tasks --defaults --vcs-ref HEAD --quiet "$@" . "$OUT/$name"
 }
 
-render plain -d project_name=plain-demo -d description="Plain demo"
+render plain -d project_name=plain-demo -d description="Plain demo" -d license=MIT
 render bare -d project_name=bare-demo -d use_python=false -d use_github_actions=false -d license=none
 render aws-min -d project_name=aws-min -d use_aws=true
 render aws-all -d project_name=aws-all -d use_aws=true \
