@@ -40,6 +40,7 @@ Then `scripts/setup_env.py` asks for each `.env` value, writes `.env`, and copie
 - **The same scan in CI**, over the full history, on every push and PR.
 - Large-file guard (1 MB) and a `.gitignore` that keeps FASTQ, BAM, VCF, h5ad, and `data/` out.
 - `CLAUDE.md` with the operating rules and a checklist of what is left to set up.
+- Python repos get `docs/layout.md`: what each directory is for, and which are real conventions.
 
 ## AWS
 
