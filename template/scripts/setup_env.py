@@ -46,15 +46,39 @@ def read_env(path):
             continue
         key, _, val = line.partition("=")
         val = val.strip()
-        if len(val) >= 2 and val[0] == val[-1] and val[0] in "'\"":
-            val = val[1:-1]
+        if val[:1] in ("'", '"') and val.find(val[0], 1) != -1:
+            val = val[1 : val.find(val[0], 1)]
+        else:
+            val = val.split(" #", 1)[0].strip()
         values[key.strip()] = val
     return values
 
 
+ENV_HEADER = """\
+# Real values for this machine. Gitignored: never commit this file.
+# Written by scripts/setup_env.py in the layout of .env.example, which also keeps a copy in the
+# env store. Tags after # come from .env.example; secret and private values are what the
+# pre-commit leak check blocks."""
+
+
 def write_env(path, spec, values):
-    lines = [f"{k}='{values.get(k, '')}'" for k in spec]
-    lines += [f"{k}='{v}'" for k, v in values.items() if k not in spec]
+    """Mirror .env.example: its groups and tags, with values filled in. Skips its header block."""
+    lines = ENV_HEADER.splitlines()
+    in_header = True
+    for line in EXAMPLE.read_text().splitlines():
+        if in_header:
+            in_header = line.startswith("#")
+            if in_header:
+                continue
+        m = LINE.match(line.strip())
+        if m:
+            note = f"  #{m.group(2).rstrip()}" if m.group(2) and m.group(2).strip() else ""
+            lines.append(f"{m.group(1)}='{values.get(m.group(1), '')}'{note}")
+        else:
+            lines.append(line)
+    extra = [k for k in values if k not in spec]
+    if extra:
+        lines += ["", "# Not in .env.example"] + [f"{k}='{values[k]}'" for k in extra]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n")
     path.chmod(0o600)
