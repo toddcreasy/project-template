@@ -314,7 +314,7 @@ Tools in this phase:
 - **Prompt caching**: Bedrock reuses a repeated prompt prefix at a fraction of the token price. Why: the single cheapest cost fix.
 
 - [ ] Probe model access with a real one-token `converse` call for each model. `list-inference-profiles` and `get-foundation-model-availability` read green for models this account cannot invoke
-- [ ] Pin exact inference profile IDs as `MODEL_SMALL` and `MODEL_LARGE` in `.env.example` defaults and the settled decisions; record the probe date
+- [ ] `MODEL_SMALL` defaults to `anthropic.claude-haiku-5-5` and `MODEL_LARGE` to `anthropic.claude-opus-5-5`. If the probe says on-demand calls need an inference profile, switch to the profile ID (`us.` or `global.` prefix). Record the IDs that worked, and the probe date, in `.env.example` defaults and the settled decisions
 {%- if agents %}
 - [ ] `src/{{ package_name }}/agents/`: one Strands agent, typed output model, one local tool, prompt caching enabled
 - [ ] `infra/agent.tf`: AgentCore runtime from the ECR image, execution role scoped to the pinned model IDs

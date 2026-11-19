@@ -155,8 +155,8 @@ record the date on anything that can change underneath you.
 |---|---|
 | Monthly budget | `${{ monthly_budget }}`, alerts to `TF_VAR_alert_email` in `.env` |
 | Python | `{{ python_version }}`, pinned in `.python-version` |
-| `MODEL_SMALL` | fill in the exact inference profile ID |
-| `MODEL_LARGE` | fill in the exact inference profile ID |
+| `MODEL_SMALL` | `anthropic.claude-haiku-5-5` unless the probe required an inference profile ID |
+| `MODEL_LARGE` | `anthropic.claude-opus-5-5` unless the probe required an inference profile ID |
 | Models allowed | list the exact IDs that have been probed and work. No other IDs. |
 
 Cost readings need care once credits are involved. Promotional credits offset usage
