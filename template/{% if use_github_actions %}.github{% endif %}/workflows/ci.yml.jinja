@@ -37,7 +37,10 @@ jobs:
           BASE: {% raw %}${{ github.event.pull_request.base.sha || github.event.before }}{% endraw %}
           HEAD: {% raw %}${{ github.event.pull_request.head.sha || github.sha }}{% endraw %}
         run: |
-          if [ -z "$BASE" ] || [ -z "${BASE//0/}" ]; then range="-1 $HEAD"; else range="$BASE..$HEAD"; fi
+          # New branch: just the head. Force push (old base gone): every commit. Otherwise: the new ones.
+          if [ -z "$BASE" ] || [ -z "${BASE//0/}" ]; then range="-1 $HEAD"
+          elif ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then range="$HEAD"
+          else range="$BASE..$HEAD"; fi
           bad=$(git log --format='%h %ae %ce' $range | awk '$2 !~ /noreply/ || $3 !~ /noreply/ {print $1}')
           if [ -n "$bad" ]; then
             echo "Commits with a non-noreply author or committer email:" $bad
