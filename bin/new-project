@@ -17,7 +17,14 @@ missing=()
 command -v uv >/dev/null || missing+=(uv)
 command -v gh >/dev/null || missing+=(gh)
 command -v gitleaks >/dev/null || missing+=(gitleaks)
-command -v terraform >/dev/null || command -v tofu >/dev/null || missing+=(hashicorp/tap/terraform)
+command -v terraform >/dev/null || missing+=(hashicorp/tap/terraform)
+
+# Homebrew core's terraform is frozen at 1.5.7. Swap it for HashiCorp's tap.
+if brew list --formula --full-name 2>/dev/null | grep -qx terraform; then
+  echo "Replacing Homebrew core terraform $(terraform version | head -1) with hashicorp/tap/terraform"
+  brew uninstall terraform
+  missing+=(hashicorp/tap/terraform)
+fi
 
 if ((${#missing[@]})); then
   echo "Installing: ${missing[*]}"

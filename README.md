@@ -10,9 +10,11 @@ uvx --from "copier>=9.5,<10" copier copy --trust gh:toddcreasy/project-template 
 ```
 
 `bin/new-project` needs Homebrew. It installs whatever is missing of `uv`, `gh`, `gitleaks`,
-`terraform` (from `hashicorp/tap`), and `tflint` before asking anything. tflint is no longer in
-Homebrew, so it comes from the GitHub release, checksum-verified, into `~/.local/bin`. Log in to `gh` first if
-you want the GitHub repo created. The `uvx` route skips the installs, so bring those tools yourself.
+`terraform`, and `tflint` before asking anything. Terraform always comes from
+`brew install hashicorp/tap/terraform`; Homebrew core's copy is frozen at 1.5.7, so the script
+replaces it if that is what's installed. tflint is no longer in Homebrew, so it comes from the
+GitHub release, checksum-verified, into `~/.local/bin`. Log in to `gh` first if you want the
+GitHub repo created. The `uvx` route skips the installs, so bring those tools yourself.
 
 ## What it asks
 
