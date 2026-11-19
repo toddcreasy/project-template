@@ -9,7 +9,7 @@ bin/new-project my-repo              # creates ~/workspace/my-repo
 uvx --from "copier>=9.5,<10" copier copy --trust gh:toddcreasy/project-template ~/workspace/my-repo
 ```
 
-`bin/new-project` needs Homebrew. It installs whatever is missing of `uv`, `gh`, `gitleaks`,
+`bin/new-project` needs Homebrew. Through `bin/install-tools` it installs whatever is missing of `uv`, `gh`, `gitleaks`,
 `terraform`, and `tflint` before asking anything. Terraform always comes from
 `brew install hashicorp/tap/terraform`; Homebrew core's copy is frozen at 1.5.7, so the script
 replaces it if that is what's installed. tflint is no longer in Homebrew, so it comes from the
@@ -66,4 +66,5 @@ inside the repo. Copier diffs your answers and merges; review the result like an
 
 Files under `template/` are rendered; `template/_includes/` holds the CLAUDE.md bodies and the env
 var list they share. `scripts/test-template.sh` renders four variants and runs ruff, pytest,
-terraform validate, tflint, and the leak checks on each. Run it before pushing.
+terraform validate, tflint, and the leak checks on each. It runs `bin/install-tools` first, so
+missing tools get installed. Run it before pushing.

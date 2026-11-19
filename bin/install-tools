@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Install whatever is missing of uv, gh, gitleaks, terraform, and tflint. Leaves installed tools alone.
+# Run by bin/new-project and scripts/test-template.sh; safe to run by hand.
+set -euo pipefail
+
+if ! command -v brew >/dev/null; then
+  echo "Homebrew not found. Install it from https://brew.sh, then rerun." >&2
+  exit 1
+fi
+
+missing=()
+command -v uv >/dev/null || missing+=(uv)
+command -v gh >/dev/null || missing+=(gh)
+command -v gitleaks >/dev/null || missing+=(gitleaks)
+command -v terraform >/dev/null || missing+=(hashicorp/tap/terraform)
+
+# Homebrew core's terraform is frozen at 1.5.7. Swap it for HashiCorp's tap.
+if brew list --formula --full-name 2>/dev/null | grep -qx terraform; then
+  echo "Replacing Homebrew core terraform $(terraform version | head -1) with hashicorp/tap/terraform"
+  brew uninstall terraform
+  missing+=(hashicorp/tap/terraform)
+fi
+
+if ((${#missing[@]})); then
+  echo "Installing: ${missing[*]}"
+  brew install "${missing[@]}"
+fi
+
+# tflint left Homebrew core, so take the release zip and check it against the published checksums.
+if ! command -v tflint >/dev/null; then
+  echo "Installing tflint into ~/.local/bin"
+  arch=$(uname -m); [ "$arch" = x86_64 ] && arch=amd64
+  zip=tflint_darwin_$arch.zip
+  url=https://github.com/terraform-linters/tflint/releases/latest/download
+  tmp=$(mktemp -d)
+  curl -fsSL -o "$tmp/$zip" "$url/$zip"
+  curl -fsSL -o "$tmp/checksums.txt" "$url/checksums.txt"
+  (cd "$tmp" && grep " $zip\$" checksums.txt | shasum -a 256 -c -)
+  mkdir -p "$HOME/.local/bin"
+  unzip -oq "$tmp/$zip" tflint -d "$HOME/.local/bin"
+  trash "$tmp" 2>/dev/null || true
+  if ! command -v tflint >/dev/null; then
+    echo "tflint is in ~/.local/bin, which is not on PATH. Add it and rerun." >&2
+    exit 1
+  fi
+fi
