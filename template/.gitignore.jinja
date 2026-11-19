@@ -1,0 +1,66 @@
+# Secrets. The real values live here and in the central env store, never in git.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+{%- if use_python %}
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+{%- endif %}
+{%- if use_aws %}
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
+{%- endif %}
+{%- if "frontend" in (aws_services or []) %}
+
+# Node
+node_modules/
+.next/
+out/
+{%- endif %}
+{%- if "batch" in (aws_services or []) %}
+
+# Nextflow
+.nextflow/
+.nextflow.log*
+work/
+results/
+{%- endif %}
+
+# Data. Keep raw and large files out of git; store them in S3 or a data share.
+data/
+*.fastq
+*.fastq.gz
+*.fq.gz
+*.bam
+*.bai
+*.cram
+*.vcf.gz
+*.h5ad
+*.h5
+*.parquet
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp

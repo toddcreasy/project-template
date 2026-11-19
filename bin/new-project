@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Make a new repo from this template. Asks the questions, then the .env values.
+#   bin/new-project <name> [parent-dir]     parent defaults to ~/workspace
+# Needs uv and gh (for repo creation). Copier runs through uvx, nothing to install.
+set -euo pipefail
+name=${1:?usage: new-project <name> [parent-dir]}
+parent=${2:-$HOME/workspace}
+exec uvx --from "copier>=9.5,<10" copier copy --trust \
+  -d project_name="$name" \
+  gh:toddcreasy/project-template "$parent/$name"

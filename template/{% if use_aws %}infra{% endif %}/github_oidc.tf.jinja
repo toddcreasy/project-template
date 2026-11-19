@@ -1,0 +1,70 @@
+# Role GitHub Actions assumes through OIDC. No AWS keys are stored anywhere.
+# The OIDC provider is one per account, so aws/bootstrap owns it and this only looks it up.
+
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+}
+
+locals {
+  github_owner = split("/", var.github_repo)[0]
+  github_name  = split("/", var.github_repo)[1]
+}
+
+data "aws_iam_policy_document" "github_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    # GitHub may embed numeric ids in the subject (repo:owner@123/repo@456:...).
+    # Matching only the plain form gets denied, and the action hangs on retries.
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        "repo:${local.github_owner}/${local.github_name}:*",
+        "repo:${local.github_owner}@*/${local.github_name}@*:*",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions" {
+  name               = "${var.project}-github-actions"
+  assume_role_policy = data.aws_iam_policy_document.github_trust.json
+}
+
+# Read-only plus this project's state: enough for `terraform plan`. Widen it when CI starts
+# deploying (the CI/CD phase in CLAUDE.md), scoped to the services this project uses.
+resource "aws_iam_role_policy_attachment" "github_readonly" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+data "aws_iam_policy_document" "github_state" {
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = ["arn:aws:s3:::${var.state_bucket}"]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["${var.project}/*"]
+    }
+  }
+  statement {
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = ["arn:aws:s3:::${var.state_bucket}/${var.project}/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "github_state" {
+  name   = "terraform-state"
+  role   = aws_iam_role.github_actions.id
+  policy = data.aws_iam_policy_document.github_state.json
+}

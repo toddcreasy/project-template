@@ -1,0 +1,29 @@
+{%- from "template/_includes/env.jinja" import env_vars with context -%}
+{%- set app_vars = [] %}
+{%- for name, tag, default, group in env_vars if not name.startswith("TF_VAR_") and name != "AWS_PROFILE" %}
+{%- set _ = app_vars.append((name, tag, default)) %}
+{%- endfor -%}
+from functools import lru_cache
+{%- if app_vars %}
+{% if app_vars | selectattr(1, "equalto", "secret") | list %}
+from pydantic import SecretStr
+{%- endif %}
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+{% for name, tag, default in app_vars %}
+    {{ name | lower }}: {{ "SecretStr" if tag == "secret" else "str" }}{% if default %} = "{{ default }}"{% endif %}
+{%- endfor %}
+{%- else %}
+
+
+class Settings:
+    """No env vars yet. Switch to pydantic-settings when the app reads the first one."""
+{%- endif %}
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

@@ -1,0 +1,21 @@
+output "github_actions_role_arn" {
+  description = "Store as the AWS_ROLE_ARN repo secret"
+  value       = aws_iam_role.github_actions.arn
+}
+
+output "alerts_topic_arn" {
+  value = aws_sns_topic.alerts.arn
+}
+{%- if "s3" in aws_services %}
+
+output "data_bucket" {
+  description = "S3_BUCKET in .env"
+  value       = aws_s3_bucket.data.bucket
+}
+{%- endif %}
+{%- if "apprunner" in aws_services or "agentcore" in aws_services or "lambda" in aws_services %}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.app.repository_url
+}
+{%- endif %}

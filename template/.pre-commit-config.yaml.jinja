@@ -1,0 +1,43 @@
+# Runs before every commit. CI runs the same checks, so --no-verify only delays the failure.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: env-leaks
+        name: values from .env in staged files
+        entry: python3 scripts/check_env_leaks.py
+        language: system
+        pass_filenames: true
+{%- if use_aws %}
+      - id: terraform-fmt
+        name: terraform fmt
+        # Skips with a note if terraform is not installed yet; CI runs it regardless.
+        entry: sh -c 'command -v terraform >/dev/null || { echo "terraform not installed, skipped"; exit 0; }; terraform fmt -check -recursive infra'
+        language: system
+        files: \.tf$
+        pass_filenames: false
+{%- endif %}
+{%- if use_python %}
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.6
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+      - id: ruff-format
+{%- endif %}

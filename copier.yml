@@ -1,0 +1,181 @@
+# New-project generator. Run it through bin/new-project, or directly:
+#   uvx copier copy --trust gh:toddcreasy/project-template ~/workspace/<name>
+# Pull later template changes into a generated repo:
+#   uvx copier update --trust
+
+_min_copier_version: "9.5.0"
+_subdirectory: template
+_answers_file: .copier-answers.yml
+_exclude:
+  - _includes
+
+_message_before_copy: |
+  New project from toddcreasy/project-template.
+  Secret values are asked for after the questions and never stored in the answers file.
+
+# ---------------------------------------------------------------- project
+
+project_name:
+  type: str
+  help: Repo name, kebab-case (e.g. methyl-flow)
+  validator: >-
+    {% if not (project_name | regex_search('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')) %}
+    Use lowercase letters, digits, and single hyphens. Start with a letter.
+    {% endif %}
+
+description:
+  type: str
+  help: One-line purpose (README and pyproject)
+  default: ""
+
+github_owner:
+  type: str
+  help: GitHub owner
+  default: toddcreasy
+
+license:
+  type: str
+  help: License
+  choices:
+    MIT: MIT
+    None (all rights reserved): none
+  default: MIT
+
+# ---------------------------------------------------------------- python
+
+use_python:
+  type: bool
+  help: Python project? (always uv, ruff, pytest, pre-commit)
+  default: true
+
+python_version:
+  type: str
+  help: Python version
+  choices: ["3.14", "3.13", "3.12"]
+  default: "3.14"
+  when: "{{ use_python }}"
+
+package_name:
+  type: str
+  help: Python package name under src/
+  default: "{{ project_name | replace('-', '_') }}"
+  when: "{{ use_python }}"
+  validator: >-
+    {% if not (package_name | regex_search('^[a-z][a-z0-9_]*$')) %}
+    Use lowercase letters, digits, and underscores.
+    {% endif %}
+
+# ---------------------------------------------------------------- github
+
+use_github_actions:
+  type: bool
+  help: GitHub Actions CI? (the secret and personal-info scan always runs in it)
+  default: true
+
+create_github_repo:
+  type: bool
+  help: Create the GitHub repo and push the first commit with gh?
+  default: true
+
+repo_visibility:
+  type: str
+  help: Repo visibility
+  choices: [private, public]
+  default: private
+  when: "{{ create_github_repo }}"
+
+# ---------------------------------------------------------------- aws
+
+use_aws:
+  type: bool
+  help: Uses AWS? (Terraform in infra/)
+  default: false
+
+aws_region:
+  type: str
+  help: AWS region (everything lives in one)
+  default: us-east-1
+  when: "{{ use_aws }}"
+
+aws_profile:
+  type: str
+  help: AWS CLI profile name for local work
+  default: default
+  when: "{{ use_aws }}"
+
+tf_state_bucket:
+  type: str
+  help: Terraform state bucket (one per account, shared by all projects; made once by aws/bootstrap)
+  default: "{{ github_owner }}-tfstate-{{ aws_region }}"
+  when: "{{ use_aws }}"
+
+monthly_budget:
+  type: int
+  help: Monthly budget ceiling in dollars for this project
+  default: 30
+  when: "{{ use_aws }}"
+
+aws_services:
+  type: str
+  help: AWS services (space to toggle, enter to confirm)
+  multiselect: true
+  choices:
+    S3 bucket for files and data: s3
+    Aurora Serverless v2 Postgres with pgvector: aurora
+    App Runner backend API (FastAPI container): apprunner
+    Lambda functions: lambda
+    Bedrock models: bedrock
+    AgentCore agent runtime and MCP gateway: agentcore
+    Next.js frontend on Amplify with Cognito sign-in: frontend
+    AWS Batch for Nextflow pipelines: batch
+    Static site on S3 and CloudFront: static_site
+  default: []
+  when: "{{ use_aws }}"
+
+# ---------------------------------------------------------------- env
+
+extra_env_vars:
+  type: str
+  help: >-
+    Other env vars the app reads, comma separated (e.g. NCBI_API_KEY, LOG_LEVEL).
+    Names with KEY, TOKEN, SECRET, or PASSWORD get hidden input. You set values next.
+  default: ""
+  validator: >-
+    {% for v in extra_env_vars.split(',') if v.strip() %}
+    {% if not (v.strip() | regex_search('^[A-Z][A-Z0-9_]*$')) %}{{ v.strip() }} is not UPPER_SNAKE_CASE. {% endif %}
+    {% endfor %}
+
+env_store_dir:
+  type: str
+  help: Central folder that keeps a copy of every repo's .env
+  default: ~/workspace/envs
+
+# ---------------------------------------------------------------- tasks
+
+_tasks:
+  - command: git init -q -b main
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: chmod +x scripts/setup_env.py scripts/check_env_leaks.py
+  - command: python3 scripts/setup_env.py --store-dir "{{ env_store_dir }}" --repo "{{ project_name }}"
+  - command: uv sync -q || echo "uv sync failed; run it by hand."
+    when: "{{ use_python }}"
+  - command: uvx pre-commit install
+    when: "{{ _copier_operation == 'copy' }}"
+  # A failing hook must not abort Copier: it deletes the whole new repo on error.
+  - command: >-
+      git add -A && git commit -q -m "Scaffold from project-template"
+      || echo "First commit failed (see hook output above). Fix it, then commit by hand."
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: >-
+      gh repo create {{ github_owner }}/{{ project_name }} --{{ repo_visibility }}
+      {% if description %}--description "{{ description | replace('"', '') }}"{% endif %}
+      --source . --remote origin --push
+      || echo "gh repo create failed. Run it by hand once the first commit exists."
+    when: "{{ _copier_operation == 'copy' and create_github_repo }}"
+
+_message_after_copy: |
+  Done: {{ _copier_conf.dst_path }}
+  Next: open it in Claude Code. CLAUDE.md lists what is left to set up.
+  {% if use_aws -%}
+  First AWS project in this account? Run aws/bootstrap in project-template once (state bucket and GitHub OIDC provider).
+  {% endif -%}

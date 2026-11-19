@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-{% raw %}${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Always on. Default gitleaks rules (keys, tokens) plus the personal-info rules in
+  # .gitleaks.toml, across the full history so a secret removed in a later commit still fails.
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar xz -C /usr/local/bin gitleaks
+      - name: Scan for secrets and personal info
+        run: gitleaks git --config .gitleaks.toml --redact --verbose --exit-code 1 .
+{%- if use_python %}
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+{%- endif %}
+{%- if use_aws %}
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - uses: terraform-linters/setup-tflint@v6
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - run: tflint --init && tflint
+
+  # Plan against the real account on PRs. Off until the Phase 1 OIDC role exists: set the
+  # AWS_ROLE_ARN and TF_VAR_ALERT_EMAIL repo secrets, then the TF_PLAN repo variable to true.
+  plan:
+    if: github.event_name == 'pull_request' && vars.TF_PLAN == 'true'
+    needs: [secrets, terraform]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_VAR_alert_email: {% raw %}${{ secrets.TF_VAR_ALERT_EMAIL }}{% endraw %}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: {% raw %}${{ secrets.AWS_ROLE_ARN }}{% endraw %}
+          aws-region: {{ aws_region }}
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -lock=false -no-color
+{%- endif %}

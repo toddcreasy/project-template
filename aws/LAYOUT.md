@@ -109,13 +109,13 @@ Alembic's own default is `alembic/`. `migrations/` is more descriptive and just 
 ### `infra/`
 
 Cloud infrastructure described in code, so that creating it is repeatable and reviewable. Here it
-is a CDK app, meaning Python that generates the infrastructure definition.
+is a Terraform root module: `.tf` files, one per concern, applied together.
 
 Two reasons it sits beside `src/` rather than inside it. It is not part of the application, so it
 should not ship when the package is installed. And it has different dependencies, which you do not
 want in your production container.
 
-Common alternative names: `cdk/`, `terraform/`, `deploy/`, `ops/`.
+Common alternative names: `terraform/`, `cdk/`, `deploy/`, `ops/`.
 
 **Verdict: widely used, not enforced. Keeping infrastructure out of the application package is the
 part that matters.**

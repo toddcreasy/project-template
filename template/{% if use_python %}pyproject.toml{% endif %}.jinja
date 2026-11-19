@@ -1,0 +1,44 @@
+{%- from "template/_includes/env.jinja" import env_vars with context -%}
+[project]
+name = "{{ project_name }}"
+version = "0.1.0"
+description = "{{ description | replace('"', "'") }}"
+readme = "README.md"
+requires-python = ">={{ python_version }}"
+{%- if license == "MIT" %}
+license = "MIT"
+license-files = ["LICENSE"]
+{%- endif %}
+dependencies = [
+{%- if env_vars %}
+    "pydantic-settings>=2.16",
+{%- endif %}
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.7",
+    "pytest>=9.2",
+    "ruff>=0.17",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.14"]
+build-backend = "uv_build"
+{%- if package_name != project_name | replace('-', '_') %}
+
+[tool.uv.build-backend]
+module-name = "{{ package_name }}"
+{%- endif %}
+
+[tool.ruff]
+line-length = 100
+target-version = "py{{ python_version | replace('.', '') }}"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not network'"
+markers = ["network: makes real network calls; skipped unless run with -m network"]

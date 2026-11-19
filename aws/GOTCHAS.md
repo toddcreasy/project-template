@@ -1,12 +1,14 @@
 # Gotchas
 
-Failures from building this stack once, with the error text that identifies them. Every one of
-these deployed cleanly or looked correct before it bit.
+Failures from building this stack once (glia-nav, on CDK), with the error text that identifies
+them. Every one of these deployed cleanly or looked correct before it bit. New projects use
+Terraform; the service-level failures carry over unchanged, and the Terraform section lists the
+traps the generator is built around.
 
-The theme worth internalising: **`cdk deploy` reporting success means CloudFormation converged on
-your template, not that the behaviour you intended is live.** Three separate failures below were
-reported as successful deploys. The check that caught each was comparing the deployed artifact
-against the source, never the deploy log.
+The theme worth internalising: **a successful deploy means the tool converged on your config, not
+that the behaviour you intended is live.** Three separate failures below were reported as
+successful deploys. The check that caught each was comparing the deployed artifact against the
+source, never the deploy log.
 
 ---
 
@@ -26,7 +28,39 @@ inert spend guard.
 
 ---
 
-## CloudFormation and CDK
+## Terraform
+
+Not yet hit in a real run. These are the known traps the template is set up to avoid.
+
+**The GitHub OIDC provider is one per account.** A second `aws_iam_openid_connect_provider` for
+`token.actions.githubusercontent.com` fails with `EntityAlreadyExists`. `aws/bootstrap` owns it and
+projects only look it up. If glia-nav's CDK stack already created it, run bootstrap with
+`create_github_oidc_provider=false`, or import it.
+
+**The state bucket cannot live in the state it holds.** `aws/bootstrap` keeps local state on
+purpose. Every project shares the bucket, one key each, with `use_lockfile = true` for S3-native
+locking (Terraform 1.11 and later; no DynamoDB table).
+
+**Cost allocation tags cannot be activated before they appear in billing data.** The budget filters
+on the `project` tag, so it reads $0 until activation. Apply bootstrap with
+`activate_cost_tags=false` first and flip it a day or two later.
+
+**Services create their own log groups with no expiry.** Lambda and others write to
+`/aws/lambda/<name>` on first run. Create the group in Terraform first, with the exact name and
+`retention_in_days = 30`, and make the function depend on it.
+
+**Terraform builds independent resources in parallel.** The Transaction Search race below happens
+here too; the fix is `depends_on`.
+
+**`aws_bedrock_guardrail_version` does not cut a new version when the guardrail changes.** Same bug
+as the CDK version below. Add `lifecycle { replace_triggered_by = [aws_bedrock_guardrail.this] }`.
+
+**A killed `terraform apply` leaves a stale lock.** Never cancel a deploy job midway. If it happens,
+`terraform force-unlock <id>` after confirming nothing else is running.
+
+---
+
+## CloudFormation and CDK (glia-nav)
 
 **Cyclic stack exports are rejected, and auth placement causes them.**
 

@@ -1,0 +1,5 @@
+{%- if use_aws -%}
+{% include "template/_includes/claude-aws-build.md" %}
+{%- else -%}
+{% include "template/_includes/claude-python.md" %}
+{%- endif %}

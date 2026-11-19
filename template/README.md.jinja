@@ -1,0 +1,37 @@
+# {{ project_name }}
+
+{{ description or "One-line purpose goes here." }}
+
+## Setup
+
+```bash
+python3 scripts/setup_env.py        # fill .env; --pull restores it from {{ env_store_dir }}
+{%- if use_python %}
+uv sync
+uvx pre-commit install
+uv run pytest
+{%- else %}
+uvx pre-commit install
+{%- endif %}
+```
+{%- if use_aws %}
+
+## Infrastructure
+
+Terraform in `infra/`, state in `s3://{{ tf_state_bucket }}/{{ project_name }}/`.
+
+```bash
+set -a; source .env; set +a
+terraform -chdir=infra init
+terraform -chdir=infra plan
+terraform -chdir=infra apply
+```
+
+Teardown: `terraform -chdir=infra destroy`.
+{%- endif %}
+{%- if license == "MIT" %}
+
+## License
+
+MIT
+{%- endif %}

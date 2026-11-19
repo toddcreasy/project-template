@@ -1,0 +1,20 @@
+terraform {
+  required_version = ">= 1.11"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+
+  # Shared state bucket, one key per project. aws/bootstrap in project-template creates it.
+  # use_lockfile is S3-native locking; no DynamoDB table.
+  backend "s3" {
+    bucket       = "{{ tf_state_bucket }}"
+    key          = "{{ project_name }}/terraform.tfstate"
+    region       = "{{ aws_region }}"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

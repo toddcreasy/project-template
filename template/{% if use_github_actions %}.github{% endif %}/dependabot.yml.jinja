@@ -1,0 +1,19 @@
+# Monthly version bumps as PRs. CI has to pass before you merge them.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+{%- if use_python %}
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+{%- endif %}
+{%- if use_aws %}
+  - package-ecosystem: terraform
+    directory: /infra
+    schedule:
+      interval: monthly
+{%- endif %}

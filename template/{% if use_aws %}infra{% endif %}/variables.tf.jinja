@@ -1,0 +1,36 @@
+variable "project" {
+  type    = string
+  default = "{{ project_name }}"
+}
+
+variable "env" {
+  type    = string
+  default = "dev"
+}
+
+variable "aws_region" {
+  type    = string
+  default = "{{ aws_region }}"
+}
+
+variable "github_repo" {
+  description = "owner/repo allowed to assume the CI role"
+  type        = string
+  default     = "{{ github_owner }}/{{ project_name }}"
+}
+
+variable "state_bucket" {
+  type    = string
+  default = "{{ tf_state_bucket }}"
+}
+
+variable "monthly_budget" {
+  description = "Set from TF_VAR_monthly_budget in .env"
+  type        = number
+  default     = {{ monthly_budget }}
+}
+
+variable "alert_email" {
+  description = "Budget and alarm emails. Set from TF_VAR_alert_email in .env; a GitHub secret in CI. Never commit it."
+  type        = string
+}

@@ -61,7 +61,7 @@ This is the framework. Any deployment, any company, any size.
 | 7 | Serving a website to browsers | Amplify Hosting | S3 + CloudFront, App Runner, EC2 + nginx |
 | 8 | Knowing who your users are | Cognito | Auth0, Clerk, hand-built (do not) |
 | 9 | Seeing what is happening | CloudWatch, X-Ray | Datadog, Grafana, Honeycomb |
-| 10 | Getting code from laptop to cloud | CDK plus GitHub Actions | Terraform, CloudFormation by hand, clicking in the console |
+| 10 | Getting code from laptop to cloud | Terraform plus GitHub Actions | CDK, CloudFormation by hand, clicking in the console |
 
 Plus two that are easy to skip and expensive to skip: **cost control** and **teardown**.
 
@@ -206,7 +206,7 @@ is a small, well-defined job. Storing passwords safely is not.
 **What bites.** A browser cannot keep a secret, so a browser-facing client must be configured
 without a client secret. Also, put the user directory "upstream" of whatever verifies its tokens.
 Getting this backwards creates two pieces of infrastructure each waiting on the other, which
-CloudFormation refuses to build.
+neither CloudFormation nor Terraform will build.
 
 ### Job 9: Seeing what is happening (CloudWatch, X-Ray)
 
@@ -234,14 +234,15 @@ own log stores will not set a limit for you. Audit them directly rather than ass
 Two halves.
 
 **Describing the infrastructure.** Clicking in the console does not scale, cannot be reviewed, and
-cannot be rebuilt. **CloudFormation** creates resources from a description file. **CDK** writes
-that file from real code, here Python, so you get loops, functions, and types.
+cannot be rebuilt. **Terraform** creates resources from `.tf` files and records what it made in a
+state file, kept in S3 so the laptop and CI agree on it.
 
-The payoff is that `cdk destroy` reliably removes what `cdk deploy` created, and a code review can
-show infrastructure changes before they happen.
+The payoff is that `terraform destroy` reliably removes what `terraform apply` created, and
+`terraform plan` shows infrastructure changes in a code review before they happen.
 
-**The alternative.** Terraform does the same job and works across clouds. CDK was chosen here
-because the project is already Python.
+**The alternative.** AWS CDK writes CloudFormation from Python and was used for glia-nav, the
+worked example here. New projects use Terraform: one tool across every project, it works on any
+cloud a client runs, and it is the IaC tool most teams already know.
 
 **Running the deployment.** GitHub Actions runs tests on every proposed change and deploys on
 merge. It connects to AWS using **OIDC**, where GitHub proves its identity directly and borrows a
@@ -269,7 +270,7 @@ fired once. Turn Cost Explorer on the day you open the account.
 
 Know how to delete it before you build it. Two things routinely block a clean teardown: buckets
 that are not really empty because of versioning, and log stores or other resources that services
-created for themselves and CloudFormation does not own.
+created for themselves and Terraform does not own.
 
 Write the teardown order down, and check it against reality rather than assuming.
 
@@ -338,7 +339,7 @@ per-request efficiency.
 control plane before a single machine runs. Starts making sense at roughly ten services with
 steady traffic, or when you need workloads the simpler services will not run.
 
-**Terraform.** Does CDK's job. CDK won because the project is already Python.
+**AWS CDK.** Does Terraform's job, AWS only. Kept on glia-nav, which predates the switch.
 
 **Snowflake, Databricks.** Data platforms priced for companies.
 
