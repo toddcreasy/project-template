@@ -11,6 +11,12 @@ updates:
     schedule:
       interval: monthly
 {%- endif %}
+{%- if use_postgres %}
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly
+{%- endif %}
 {%- if use_aws %}
   - package-ecosystem: terraform
     directory: /infra

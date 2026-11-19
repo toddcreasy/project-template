@@ -13,6 +13,10 @@ breaking them causes real bugs. Others are habit, and you should feel free to di
 ├── .python-version           pins the interpreter
 ├── .env.example              every environment variable the app reads, with no values
 ├── .pre-commit-config.yaml   checks that run before each commit
+{%- if use_postgres %}
+├── compose.yaml              local Postgres for development, not deployed
+├── db/init/                  SQL that runs once when the local database is first created
+{%- endif %}
 ├── src/{{ package_name }}/            the application code
 ├── tests/                    tests for it
 ├── scripts/                  one-shot operational scripts

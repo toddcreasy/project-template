@@ -194,6 +194,9 @@ cannot fire, and cost allocation tags cannot be activated.
 - [x] `.env` written and copied to `{{ env_store_dir }}/{{ project_name }}.env`
 - [x] `infra/`: provider, S3 backend, budget, alert topic, GitHub OIDC role{% if "s3" in svc %}, data bucket{% endif %}{% if "apprunner" in svc or agents or "lambda" in svc %}, ECR repository{% endif %}
 - [ ] Cost Explorer enabled (maintainer, console)
+{%- if use_postgres %}
+- [ ] Local Postgres: `docker compose up -d --wait`, then show `docker compose exec db psql -U {{ project_name | replace('-', '_') }} -c "select extversion from pg_extension where extname = 'vector'"` returning a version
+{%- endif %}
 {%- if create_github_repo %}
 - [x] GitHub repo created and pushed
 {%- else %}

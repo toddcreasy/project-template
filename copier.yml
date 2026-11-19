@@ -133,6 +133,13 @@ aws_services:
   default: []
   when: "{{ use_aws }}"
 
+# ---------------------------------------------------------------- local services
+
+use_postgres:
+  type: bool
+  help: Local Postgres with pgvector in Docker Compose? (defaults to yes when you picked Aurora)
+  default: "{{ 'aurora' in (aws_services or []) }}"
+
 # ---------------------------------------------------------------- env
 
 extra_env_vars:
@@ -157,6 +164,15 @@ _tasks:
   - command: git init -q -b main
     when: "{{ _copier_operation == 'copy' }}"
   - command: chmod +x scripts/setup_env.py scripts/check_env_leaks.py
+  - command: >-
+      command -v docker >/dev/null || brew install --cask docker
+      || echo "Docker install failed. Install Docker Desktop, then run docker compose up -d --wait."
+    when: "{{ use_postgres }}"
+  # Random local database password, so you never type one and it can't collide with ordinary text.
+  - command: >-
+      grep -qs '^POSTGRES_PASSWORD=' .env
+      || python3 -c "import secrets; print(f\"POSTGRES_PASSWORD='{secrets.token_urlsafe(24)}'\")" >> .env
+    when: "{{ use_postgres }}"
   - command: python3 scripts/setup_env.py --store-dir "{{ env_store_dir }}" --repo "{{ project_name }}"
   - command: uv sync -q || echo "uv sync failed; run it by hand."
     when: "{{ use_python }}"

@@ -93,6 +93,9 @@ The generator already did the scaffold: layout, {% if use_python %}uv lockfile, 
 {%- if use_python -%}
 - [ ] Show clean output from `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pytest`
 {% endif -%}
+{% if use_postgres -%}
+- [ ] Local Postgres: `docker compose up -d --wait`, then show `docker compose exec db psql -U {{ project_name | replace('-', '_') }} -c "select extversion from pg_extension where extname = 'vector'"` returning a version
+{% endif -%}
 - [ ] Prove the leak checks fire: stage a scratch file containing a fake personal email, show `uvx pre-commit run --files <file>` failing on gitleaks, then delete the file
 {% if use_github_actions -%}
 - [ ] Open a trivial PR and show every CI job green

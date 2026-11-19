@@ -13,6 +13,9 @@ uv run pytest
 {%- else %}
 uvx pre-commit install
 {%- endif %}
+{%- if use_postgres %}
+docker compose up -d --wait         # local Postgres with pgvector; down -v deletes its data
+{%- endif %}
 ```
 {%- if use_aws %}
 
