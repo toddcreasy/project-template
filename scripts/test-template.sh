@@ -30,7 +30,7 @@ for d in "$OUT"/*/; do
     if grep -rnE '<[A-Z_]{4,}>' --include='*.md' . | grep -vE 'AWS_ACCOUNT_ID|SSO_PORTAL_URL|PERMISSION_SET'; then
       echo "unfilled placeholder"; exit 1
     fi
-    if LC_ALL=C.UTF-8 grep -rnP '[\x{2013}\x{2014}]' .; then
+    if git ls-files -oz --exclude-standard | xargs -0 perl -CSD -ne 'if (/[\x{2013}\x{2014}]/) { print "$ARGV:$.: $_"; $f = 1 } close ARGV if eof; END { exit !$f }'; then
       echo "en or em dash in output"; exit 1
     fi
     for f in $(git ls-files --others --exclude-standard); do

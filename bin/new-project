@@ -1,10 +1,49 @@
 #!/usr/bin/env bash
-# Make a new repo from this template. Asks the questions, then the .env values.
+# Make a new repo from this template. Installs missing tools with Homebrew, asks the questions,
+# then the .env values.
 #   bin/new-project <name> [parent-dir]     parent defaults to ~/workspace
-# Needs uv and gh (for repo creation). Copier runs through uvx, nothing to install.
+# Copier runs through uvx, nothing to install for it.
 set -euo pipefail
 name=${1:?usage: new-project <name> [parent-dir]}
 parent=${2:-$HOME/workspace}
+
+if ! command -v brew >/dev/null; then
+  echo "Homebrew not found. Install it from https://brew.sh, then rerun." >&2
+  exit 1
+fi
+
+# command name -> brew formula. Core terraform is frozen at 1.5.7, so it comes from HashiCorp's tap.
+missing=()
+command -v uv >/dev/null || missing+=(uv)
+command -v gh >/dev/null || missing+=(gh)
+command -v gitleaks >/dev/null || missing+=(gitleaks)
+command -v terraform >/dev/null || command -v tofu >/dev/null || missing+=(hashicorp/tap/terraform)
+
+if ((${#missing[@]})); then
+  echo "Installing: ${missing[*]}"
+  brew install "${missing[@]}"
+fi
+
+# tflint left Homebrew core, so take the release zip and check it against the published checksums.
+if ! command -v tflint >/dev/null; then
+  echo "Installing tflint into ~/.local/bin"
+  arch=$(uname -m); [ "$arch" = x86_64 ] && arch=amd64
+  zip=tflint_darwin_$arch.zip
+  url=https://github.com/terraform-linters/tflint/releases/latest/download
+  tmp=$(mktemp -d)
+  curl -fsSL -o "$tmp/$zip" "$url/$zip"
+  curl -fsSL -o "$tmp/checksums.txt" "$url/checksums.txt"
+  (cd "$tmp" && grep " $zip\$" checksums.txt | shasum -a 256 -c -)
+  mkdir -p "$HOME/.local/bin"
+  unzip -oq "$tmp/$zip" tflint -d "$HOME/.local/bin"
+  trash "$tmp" 2>/dev/null || true
+  command -v tflint >/dev/null || echo "Add ~/.local/bin to PATH so tflint is found." >&2
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+  echo "gh is not logged in. Run 'gh auth login' first if you want the GitHub repo created." >&2
+fi
+
 exec uvx --from "copier>=9.5,<10" copier copy --trust \
   -d project_name="$name" \
   gh:toddcreasy/project-template "$parent/$name"

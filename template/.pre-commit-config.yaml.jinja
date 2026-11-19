@@ -11,13 +11,14 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.1
-    hooks:
-      - id: gitleaks
-
   - repo: local
     hooks:
+      # Uses the installed gitleaks, installing it with brew if missing. Never skips.
+      - id: gitleaks
+        name: gitleaks
+        entry: sh -c 'command -v gitleaks >/dev/null || { command -v brew >/dev/null && brew install gitleaks; } || { echo "gitleaks not found; brew install gitleaks"; exit 1; }; exec gitleaks git --pre-commit --redact --staged --verbose --config .gitleaks.toml'
+        language: system
+        pass_filenames: false
       - id: env-leaks
         name: values from .env in staged files
         entry: python3 scripts/check_env_leaks.py
@@ -26,8 +27,8 @@ repos:
 {%- if use_aws %}
       - id: terraform-fmt
         name: terraform fmt
-        # Skips with a note if terraform is not installed yet; CI runs it regardless.
-        entry: sh -c 'command -v terraform >/dev/null || { echo "terraform not installed, skipped"; exit 0; }; terraform fmt -check -recursive infra'
+        # Installs terraform from HashiCorp's tap if missing; Homebrew core is stuck at 1.5.7.
+        entry: sh -c 'command -v terraform >/dev/null || { command -v brew >/dev/null && brew install hashicorp/tap/terraform; } || { echo "terraform not found; brew install hashicorp/tap/terraform"; exit 1; }; terraform fmt -check -recursive infra'
         language: system
         files: \.tf$
         pass_filenames: false

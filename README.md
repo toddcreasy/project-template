@@ -9,8 +9,10 @@ bin/new-project my-repo              # creates ~/workspace/my-repo
 uvx --from "copier>=9.5,<10" copier copy --trust gh:toddcreasy/project-template ~/workspace/my-repo
 ```
 
-Needs `uv` and `gh` (logged in). AWS projects also want `terraform` and `tflint` locally
-(`brew install terraform tflint`); CI runs them regardless.
+`bin/new-project` needs Homebrew. It installs whatever is missing of `uv`, `gh`, `gitleaks`,
+`terraform` (from `hashicorp/tap`), and `tflint` before asking anything. tflint is no longer in
+Homebrew, so it comes from the GitHub release, checksum-verified, into `~/.local/bin`. Log in to `gh` first if
+you want the GitHub repo created. The `uvx` route skips the installs, so bring those tools yourself.
 
 ## What it asks
 
