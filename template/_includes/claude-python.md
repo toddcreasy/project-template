@@ -77,6 +77,9 @@ and `tests/`.
 - `python3 scripts/setup_env.py` asks for missing values, writes `.env`, and copies it to `{{ env_store_dir }}/{{ project_name }}.env`. `--pull` restores `.env` from that copy on a fresh clone. When the app starts reading a new variable, add it to `.env.example` first, then rerun the script.
 - Pre-commit blocks a commit containing a known key format, a personal email, phone number, SSN, or street address (`.gitleaks.toml`), or any secret or private value from `.env` (`scripts/check_env_leaks.py`). CI repeats the gitleaks scan over the full history.
 - Never bypass these with `--no-verify`. A real false positive gets `gitleaks:allow` on that line, nothing broader.
+{%- if use_github_actions %}
+- The CI `secrets` job scans the full history and fails any new commit whose author or committer email is not a GitHub noreply address. Never remove or weaken it.
+{%- endif %}
 
 ---
 

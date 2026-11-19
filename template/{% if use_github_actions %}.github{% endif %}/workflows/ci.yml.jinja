@@ -30,6 +30,20 @@ jobs:
             | tar xz -C /usr/local/bin gitleaks
       - name: Scan for secrets and personal info
         run: gitleaks git --config .gitleaks.toml --redact --verbose --exit-code 1 .
+      # Gitleaks reads file contents, not commit metadata. A personal author email is public
+      # the moment it is pushed. Prints commit hashes only, never the address.
+      - name: New commits use a noreply email
+        env:
+          BASE: {% raw %}${{ github.event.pull_request.base.sha || github.event.before }}{% endraw %}
+          HEAD: {% raw %}${{ github.event.pull_request.head.sha || github.sha }}{% endraw %}
+        run: |
+          if [ -z "$BASE" ] || [ -z "${BASE//0/}" ]; then range="-1 $HEAD"; else range="$BASE..$HEAD"; fi
+          bad=$(git log --format='%h %ae %ce' $range | awk '$2 !~ /noreply/ || $3 !~ /noreply/ {print $1}')
+          if [ -n "$bad" ]; then
+            echo "Commits with a non-noreply author or committer email:" $bad
+            echo "Set git config user.email to your GitHub noreply address and rewrite these commits."
+            exit 1
+          fi
 {%- if use_python %}
 
   python:

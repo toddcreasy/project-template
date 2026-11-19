@@ -36,6 +36,9 @@ Direct. Evidence-first. Skip preamble.
 ### Secrets and personal info
 - `.env.example` lists every variable; tags after `#` mark values that must never be committed. `python3 scripts/setup_env.py` fills `.env` and syncs `{{ env_store_dir }}/{{ project_name }}.env`; `--pull` restores it.
 - Pre-commit and CI run gitleaks with personal-info rules; pre-commit also blocks any secret or private `.env` value. Never `--no-verify`.
+{%- if use_github_actions %}
+- CI also fails any new commit whose author or committer email is not a GitHub noreply address. Never remove or weaken the `secrets` job.
+{%- endif %}
 
 ### Coding principles
 - Don't add features, refactors, or improvements beyond what was asked.

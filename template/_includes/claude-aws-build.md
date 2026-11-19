@@ -56,6 +56,9 @@ Direct. Evidence-first. Skip preamble.
 - Terraform reads `TF_VAR_*` from the shell. Load `.env` first: `set -a; source .env; set +a`.
 - Pre-commit blocks a commit containing a known key format, a personal email, phone number, SSN, or street address (`.gitleaks.toml`), or any secret or private value from `.env` (`scripts/check_env_leaks.py`). CI repeats the gitleaks scan over the full history.
 - Never bypass these with `--no-verify`. A real false positive gets `gitleaks:allow` on that line, nothing broader.
+{%- if use_github_actions %}
+- The CI `secrets` job scans the full history and fails any new commit whose author or committer email is not a GitHub noreply address. Never remove or weaken it.
+{%- endif %}
 
 ## Stack decisions
 
