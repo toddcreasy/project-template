@@ -25,7 +25,7 @@ GitHub repo created. The `uvx` route skips the installs, so bring those tools yo
 | GitHub Actions? | `ci.yml` and Dependabot. The secret and personal-info scan job is always in it |
 | Create GitHub repo? visibility | `gh repo create --push` after the first commit |
 | AWS? region, profile, budget, services | Terraform in `infra/`, and a phased build plan in `CLAUDE.md` with only the chosen services |
-| Local Postgres? | `compose.yaml` with pgvector on Postgres 17, a random password in `.env`, Docker Desktop installed if missing |
+| Local Postgres? (not asked with Aurora) | `compose.yaml` with pgvector on Postgres 17, a random password in `.env`, Docker Desktop installed if missing |
 | Extra env vars | Added to `.env.example`; names with KEY, TOKEN, SECRET, or PASSWORD get hidden input |
 | Env store folder | Where every repo's `.env` copy lives (default `~/workspace/envs`) |
 

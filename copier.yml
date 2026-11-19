@@ -137,8 +137,10 @@ aws_services:
 
 use_postgres:
   type: bool
-  help: Local Postgres with pgvector in Docker Compose? (defaults to yes when you picked Aurora)
-  default: "{{ 'aurora' in (aws_services or []) }}"
+  help: Local Postgres with pgvector in Docker Compose?
+  default: false
+  # Not asked when Aurora is picked: those projects work against Aurora directly.
+  when: "{{ 'aurora' not in (aws_services or []) }}"
 
 # ---------------------------------------------------------------- env
 
