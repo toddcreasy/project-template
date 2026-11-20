@@ -1,3 +1,6 @@
 # Copy to terraform.tfvars (gitignored) and fill in.
 email = "you@example.com"
 repos = ["owner/repo-one", "owner/repo-two"]
+# Optional: app log groups whose page views carry the visitor address, and your own addresses.
+log_groups = ["/ecs/my-app"]
+my_ips     = ["203.0.113.7"]

@@ -43,6 +43,18 @@ variable "repos" {
   type        = list(string)
 }
 
+variable "log_groups" {
+  description = "CloudWatch log groups of apps whose page views log the visitor's address (a client field); the email lists those visitors."
+  type        = list(string)
+  default     = []
+}
+
+variable "my_ips" {
+  description = "Your own addresses, left out of the visitor table."
+  type        = list(string)
+  default     = []
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -119,6 +131,18 @@ data "aws_iam_policy_document" "lambda" {
     actions   = ["ses:SendEmail"]
     resources = [aws_sesv2_email_identity.email.arn]
   }
+  dynamic "statement" {
+    for_each = length(var.log_groups) > 0 ? [1] : []
+    content {
+      actions   = ["logs:StartQuery"]
+      resources = [for g in var.log_groups : "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:${g}:*"]
+    }
+  }
+  statement {
+    # GetQueryResults has no resource to scope to; it reads only queries this role started.
+    actions   = ["logs:GetQueryResults"]
+    resources = ["*"]
+  }
   statement {
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
     resources = ["${aws_cloudwatch_log_group.lambda.arn}:*"]
@@ -153,6 +177,8 @@ resource "aws_lambda_function" "traffic" {
       BUCKET           = aws_s3_bucket.history.bucket
       EMAIL            = var.email
       TOKEN_SECRET_ARN = aws_secretsmanager_secret.token.arn
+      LOG_GROUPS       = jsonencode(var.log_groups)
+      MY_IPS           = jsonencode(var.my_ips)
     }
   }
 
