@@ -94,13 +94,20 @@ def page_views(log_group: str, day: datetime.date) -> list[dict]:
     """One UTC day's page views with a visitor address, through CloudWatch Logs Insights."""
     logs = boto3.client("logs")
     start = datetime.datetime.combine(day, datetime.time(), datetime.UTC)
-    query_id = logs.start_query(
-        logGroupName=log_group,
-        startTime=int(start.timestamp()),
-        endTime=int((start + datetime.timedelta(days=1)).timestamp()) - 1,
-        queryString="fields @timestamp, client, user_agent, path"
-        " | filter ispresent(client) | sort @timestamp asc | limit 10000",
-    )["queryId"]
+    try:
+        query_id = logs.start_query(
+            logGroupName=log_group,
+            startTime=int(start.timestamp()),
+            endTime=int((start + datetime.timedelta(days=1)).timestamp()) - 1,
+            queryString="fields @timestamp, client, user_agent, path"
+            " | filter ispresent(client) | sort @timestamp asc | limit 10000",
+        )["queryId"]
+    except logs.exceptions.MalformedQueryException as exc:
+        # Logs Insights refuses a window that ends before the log group was created (a
+        # redeploy can recreate it): nothing could have been logged that day.
+        if "creation time" in str(exc):
+            return []
+        raise
     for _ in range(60):
         result = logs.get_query_results(queryId=query_id)
         if result["status"] not in ("Scheduled", "Running"):
