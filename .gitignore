@@ -4,3 +4,7 @@
 .terraform.lock.hcl
 __pycache__/
 /.test-output/
+
+# ops/traffic: per-person values and the built Lambda zip
+ops/traffic/terraform.tfvars
+ops/traffic/build/

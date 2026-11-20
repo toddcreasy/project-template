@@ -1,7 +1,9 @@
 # CLAUDE.md
 
 This repo is a Copier template, not a project. `template/` is what generated repos get;
-`copier.yml` holds the questions and post-generation tasks.
+`copier.yml` holds the questions and post-generation tasks. One exception outside `template/`:
+`ops/traffic/` runs the daily repo traffic email for every repo (Terraform, local state; see its
+README). Never put an address, account ID, or token in it: they go in its gitignored tfvars.
 
 ## Rules
 
