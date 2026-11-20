@@ -5,12 +5,15 @@ folds the daily counts into a per-repo history in S3. A repo the token can't rea
 in the email instead of stopping the others.
 """
 
+import csv
 import datetime
 import html
+import io
 import ipaddress
 import json
 import os
 import time
+import urllib.parse
 import urllib.request
 
 import boto3
@@ -21,8 +24,13 @@ EMAIL = os.environ["EMAIL"]
 # App log groups whose page views carry the visitor's address (a "client" field); and the
 # maintainer's own addresses, left out of the visitor table.
 LOG_GROUPS = json.loads(os.environ.get("LOG_GROUPS", "[]"))
+# Static sites on Amplify Hosting, which never reach an app's own logs: [{name, app_id, domain}].
+AMPLIFY_APPS = json.loads(os.environ.get("AMPLIFY_APPS", "[]"))
 MY_IPS = set(json.loads(os.environ.get("MY_IPS", "[]")))
-BOTS = ("bot", "crawl", "spider", "slurp", "curl", "python", "go-http", "headless", "scan", "wget")
+BOTS = (
+    "bot", "crawl", "spider", "slurp", "curl", "python", "go-http", "headless", "scan", "wget",
+    "externalhit", "censys", "palo alto", "preview",
+)
 MAX_VISITORS = 40
 
 s3 = boto3.client("s3")
@@ -116,6 +124,44 @@ def page_views(log_group: str, day: datetime.date) -> list[dict]:
     return [{f["field"]: f["value"] for f in row} for row in result["results"]]
 
 
+def amplify_views(app: dict, day: datetime.date) -> list[dict]:
+    """One UTC day's page loads on an Amplify Hosting site, from its access logs (CloudFront's
+    format, produced on request as a CSV). Page loads only: no assets, API calls, or errors."""
+    start = datetime.datetime.combine(day, datetime.time(), datetime.UTC)
+    url = boto3.client("amplify").generate_access_logs(
+        appId=app["app_id"],
+        domainName=app["domain"],
+        startTime=start,
+        endTime=start + datetime.timedelta(days=1),
+    )["logUrl"]
+    if not url.startswith("https://"):
+        raise ValueError("unexpected access log URL")
+    with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (checked above)
+        rows = list(csv.DictReader(io.StringIO(response.read().decode())))
+    views = []
+    for r in rows:
+        path = r.get("cs-uri-stem", "")
+        if (
+            r.get("cs-method") != "GET"
+            or not r.get("sc-status", "").startswith(("2", "3"))
+            or path.startswith("/api/")
+            or "." in path.rsplit("/", 1)[-1]
+            or r.get("date") != str(day)
+        ):
+            continue
+        agent = next((v for k, v in r.items() if "User-Agent" in k), "")
+        views.append(
+            {
+                "time": r.get("time", "")[:5],
+                "client": r.get("c-ip", ""),
+                # CloudFront writes the user agent URL-encoded, with parentheses escaped.
+                "user_agent": urllib.parse.unquote(agent).replace("\\", ""),
+                "path": path,
+            }
+        )
+    return sorted(views, key=lambda v: v["time"])
+
+
 def owner(address: str) -> tuple[str, str]:
     """(organization, country) from RDAP, the regional registries' public lookup. Only the
     registrant organization: RDAP also lists contacts, who are people, and those are skipped."""
@@ -152,20 +198,27 @@ def browser(agent: str) -> str:
 
 
 def demo_visitors(day: datetime.date) -> tuple[list[list], str | None]:
-    """Rows for the visitor table, and an error if a log group couldn't be read."""
+    """Rows for the visitor table, and the sites that couldn't be read."""
+    sources = [
+        (group.rsplit("/", 1)[-1], lambda g=group: [
+            {**v, "time": v["@timestamp"][11:16]} for v in page_views(g, day)
+        ])
+        for group in LOG_GROUPS
+    ] + [(app["name"], lambda a=app: amplify_views(a, day)) for app in AMPLIFY_APPS]
     visitors: dict[tuple[str, str], dict] = {}
-    for group in LOG_GROUPS:
+    failures = []
+    for site, read in sources:
         try:
-            views = page_views(group, day)
-        except Exception as exc:
-            return [], f"{group}: {str(exc)[:200]}"
-        site = group.rsplit("/", 1)[-1]
+            views = read()
+        except Exception as exc:  # one site's failure must not hide the others
+            failures.append(f"{site}: {str(exc)[:200]}")
+            continue
         for v in views:
             agent = v.get("user_agent", "")
             if v["client"] in MY_IPS or any(b in agent.lower() for b in BOTS):
                 continue
             entry = visitors.setdefault(
-                (site, v["client"]), {"first": v["@timestamp"][11:16], "pages": [], "agent": agent}
+                (site, v["client"]), {"first": v["time"], "pages": [], "agent": agent}
             )
             entry["pages"].append(v["path"])
     rows = []
@@ -174,7 +227,7 @@ def demo_visitors(day: datetime.date) -> tuple[list[list], str | None]:
         pages = ", ".join(dict.fromkeys(v["pages"]))
         rows.append([site, v["first"], org or "(unknown)", country, len(v["pages"]), pages,
                      browser(v["agent"])])
-    return rows, None
+    return rows, "; ".join(failures) or None
 
 
 CELL = "padding:4px 8px;border-bottom:1px solid #d4e0e8;text-align:{align}"
@@ -242,13 +295,13 @@ def render(
         "<h3 style=\"margin:0;font-size:14px\">Pages, last 14 days</h3>",
         table(["Repo", "Page", "Views", "Unique"], pages, numeric_from=2) if pages else "<p>None.</p>",
     ]
-    if LOG_GROUPS:
+    if LOG_GROUPS or AMPLIFY_APPS:
         parts.append(
             f"<h3 style=\"margin:0;font-size:14px\">Demo site visitors, {yesterday} (UTC)</h3>"
         )
         if visitor_error:
             parts.append(f"<p>Not read: {html.escape(visitor_error)}</p>")
-        elif visitors:
+        if visitors:
             parts.append(
                 table(
                     ["Site", "First (UTC)", "Network owner", "Country", "Views", "Pages", "Browser"],
@@ -256,7 +309,7 @@ def render(
                     numeric_from=4,
                 )
             )
-        else:
+        elif not visitor_error:
             parts.append("<p>None.</p>")
     if errors:
         parts.append("<h3 style=\"margin:0;font-size:14px\">Not fetched</h3>")
@@ -275,7 +328,7 @@ def render(
             f" 14 days {s['views_14d']} views ({s['unique_14d']} unique)"
         )
     text += [f"{r}: not fetched ({e})" for r, e in errors.items()]
-    if LOG_GROUPS:
+    if LOG_GROUPS or AMPLIFY_APPS:
         text.append(f"Demo site visitors: {len(visitors)}")
         text += [f"  {v[0]} {v[1]} {v[2]} [{v[3]}] {v[4]} views: {v[5]}" for v in visitors]
     return "".join(parts), "\n".join(text)

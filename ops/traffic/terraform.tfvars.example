@@ -4,3 +4,4 @@ repos = ["owner/repo-one", "owner/repo-two"]
 # Optional: app log groups whose page views carry the visitor address, and your own addresses.
 log_groups = ["/ecs/my-app"]
 my_ips     = ["203.0.113.7"]
+amplify_apps = [{ name = "my-site", app_id = "d1abc2def3", domain = "main.d1abc2def3.amplifyapp.com" }]
