@@ -190,4 +190,7 @@ def handler(event, context):
             }
         },
     )
+    if errors and not summaries:
+        # Nothing fetched (an expired token, usually): fail the run so the alarm fires.
+        raise RuntimeError(f"no repo fetched: {errors}")
     return {"repos": len(summaries), "errors": errors}
