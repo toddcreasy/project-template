@@ -49,6 +49,16 @@ variable "log_groups" {
   default     = []
 }
 
+variable "amplify_apps" {
+  description = "Static sites on Amplify Hosting whose access logs feed the visitor table."
+  type = list(object({
+    name   = string
+    app_id = string
+    domain = string
+  }))
+  default = []
+}
+
 variable "my_ips" {
   description = "Your own addresses, left out of the visitor table."
   type        = list(string)
@@ -138,6 +148,13 @@ data "aws_iam_policy_document" "lambda" {
       resources = [for g in var.log_groups : "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:${g}:*"]
     }
   }
+  dynamic "statement" {
+    for_each = length(var.amplify_apps) > 0 ? [1] : []
+    content {
+      actions   = ["amplify:GenerateAccessLogs"]
+      resources = [for a in var.amplify_apps : "arn:aws:amplify:us-east-1:${data.aws_caller_identity.current.account_id}:apps/${a.app_id}*"]
+    }
+  }
   statement {
     # GetQueryResults has no resource to scope to; it reads only queries this role started.
     actions   = ["logs:GetQueryResults"]
@@ -179,6 +196,7 @@ resource "aws_lambda_function" "traffic" {
       TOKEN_SECRET_ARN = aws_secretsmanager_secret.token.arn
       LOG_GROUPS       = jsonencode(var.log_groups)
       MY_IPS           = jsonencode(var.my_ips)
+      AMPLIFY_APPS     = jsonencode(var.amplify_apps)
     }
   }
 

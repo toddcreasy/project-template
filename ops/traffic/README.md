@@ -33,6 +33,8 @@ Then:
 
 A failed run, or one that could fetch no repo at all (an expired token, usually), trips the `repo-traffic-errors` alarm, which emails the same address through SNS; confirm that subscription once.
 
+Demo site visitors: for each app log group in `log_groups` (page views logged with a `client` address) and each Amplify Hosting site in `amplify_apps` (its access logs), yesterday's visitors, less bots and `my_ips`, with the organization registered for each address (RDAP; never a contact, who is a person).
+
 To add a repo, add it to `repos`, give the token access to it, and apply.
 
 Replaced the per-repo traffic jobs in glia-nav and methyl-flow on 2026-11-20; their history was copied into this bucket.
