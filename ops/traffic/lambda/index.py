@@ -63,7 +63,7 @@ def update_history(repo: str, snapshot: dict) -> dict:
 
 
 def summary(repo: str, snapshot: dict, history: dict, yesterday: str) -> dict:
-    views, clones = snapshot["views"], snapshot["clones"]
+    views = snapshot["views"]
     day = next((d for d in views["views"] if d["timestamp"].startswith(yesterday)), None)
     return {
         # Display name only: every repo is the same owner.
@@ -72,12 +72,13 @@ def summary(repo: str, snapshot: dict, history: dict, yesterday: str) -> dict:
         "yesterday_unique": day["uniques"] if day else 0,
         "views_14d": views["count"],
         "unique_14d": views["uniques"],
-        "clones_14d": clones["count"],
-        "cloners_14d": clones["uniques"],
         "views_all": sum(d["count"] for d in history["views"].values()),
         "since": min(history["views"], default=yesterday),
         "referrers": snapshot["referrers"],
-        "paths": snapshot["paths"],
+        # Paths read /owner/repo/...; the Repo column already names the repo.
+        "paths": [
+            {**p, "path": p["path"].removeprefix(f"/{repo}") or "/"} for p in snapshot["paths"]
+        ],
     }
 
 
@@ -115,8 +116,6 @@ def render(summaries: list[dict], errors: dict, yesterday: str) -> tuple[str, st
         "Unique",
         "Views 14 days",
         "Unique",
-        "Clones 14 days",
-        "Unique",
         "Views since tracking began",
     ]
     rows = [
@@ -126,8 +125,6 @@ def render(summaries: list[dict], errors: dict, yesterday: str) -> tuple[str, st
             s["yesterday_unique"],
             s["views_14d"],
             s["unique_14d"],
-            s["clones_14d"],
-            s["cloners_14d"],
             f"{s['views_all']} (since {s['since']})",
         ]
         for s in summaries
@@ -152,15 +149,15 @@ def render(summaries: list[dict], errors: dict, yesterday: str) -> tuple[str, st
         parts.append("<h3 style=\"margin:0;font-size:14px\">Not fetched</h3>")
         parts.append(table(["Repo", "Error"], [[r, e] for r, e in errors.items()], numeric_from=9))
     parts.append(
-        '<p style="color:#4a5b73;font-size:12px">Clones are mostly CI and bots. GitHub keeps 14'
-        " days; the history in S3 keeps the rest.</p></div>"
+        '<p style="color:#4a5b73;font-size:12px">GitHub keeps 14 days; the history in S3 keeps'
+        " the rest. Clones are left out: GitHub doesn't say who cloned, and most clones come from"
+        " CI and crawlers; the snapshots in S3 still have them.</p></div>"
     )
     text = [f"Repo traffic, {yesterday}", ""]
     for s in summaries:
         text.append(
             f"{s['repo']}: yesterday {s['yesterday_views']} views ({s['yesterday_unique']} unique);"
-            f" 14 days {s['views_14d']} views ({s['unique_14d']} unique),"
-            f" {s['clones_14d']} clones ({s['cloners_14d']} unique)"
+            f" 14 days {s['views_14d']} views ({s['unique_14d']} unique)"
         )
     text += [f"{r}: not fetched ({e})" for r, e in errors.items()]
     return "".join(parts), "\n".join(text)
