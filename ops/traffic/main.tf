@@ -209,3 +209,30 @@ output "bucket" {
 output "token_secret_arn" {
   value = aws_secretsmanager_secret.token.arn
 }
+
+# A failed run (an expired token, a GitHub outage) sends no traffic email, so its absence would go
+# unnoticed. This alarm emails the same address instead; confirm the SNS subscription once.
+resource "aws_sns_topic" "alarm" {
+  name = "${local.name}-alarm"
+}
+
+resource "aws_sns_topic_subscription" "alarm" {
+  topic_arn = aws_sns_topic.alarm.arn
+  protocol  = "email"
+  endpoint  = var.email
+}
+
+resource "aws_cloudwatch_metric_alarm" "errors" {
+  alarm_name          = "${local.name}-errors"
+  alarm_description   = "The daily repo traffic run failed. Check the GitHub token first (README.md)."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  dimensions          = { FunctionName = aws_lambda_function.traffic.function_name }
+  statistic           = "Sum"
+  period              = 3600
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alarm.arn]
+}

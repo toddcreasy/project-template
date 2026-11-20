@@ -31,6 +31,8 @@ Then:
 
 3. Send one now instead of waiting for the morning: `aws lambda invoke --function-name repo-traffic --region us-east-1 /tmp/out.json && cat /tmp/out.json`.
 
+A failed run, or one that could fetch no repo at all (an expired token, usually), trips the `repo-traffic-errors` alarm, which emails the same address through SNS; confirm that subscription once.
+
 To add a repo, add it to `repos`, give the token access to it, and apply.
 
 Replaced the per-repo traffic jobs in glia-nav and methyl-flow on 2026-11-20; their history was copied into this bucket.
